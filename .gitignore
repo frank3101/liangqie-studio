@@ -13,6 +13,7 @@
 !/.env.example
 !/.dockerignore
 !/docker-compose.yml
+!/.github
 
 # ---- 放行：代码目录 ----
 !/core

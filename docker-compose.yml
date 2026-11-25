@@ -1,8 +1,11 @@
 services:
   liangqie:
-    build:
-      context: .
-      dockerfile: docker/Dockerfile
+    # 直接用发布好的镜像（推荐，首次拉取约 1GB，几分钟内跑起来）
+    image: ghcr.io/frank3101/liangqie-studio:latest
+    # 想自己构建镜像（改过源码的开发者）：注释掉上面 image 行，取消下面注释
+    # build:
+    #   context: .
+    #   dockerfile: docker/Dockerfile
     container_name: liangqie-web
     ports:
       - "8000:8000"      # 网页版界面 + API
