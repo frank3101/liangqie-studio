@@ -12,7 +12,7 @@ services:
       - /mnt/media2:/mnt/media2                # 可选：申诉材料
     environment:
       - TZ=Asia/Shanghai
-      - DS_EXTRA_ROOTS=/mnt/media1:/mnt/media2          # 和上面 target 保持一致
+      - DS_EXTRA_ROOTS=/mnt/media1:/mnt/media2          # 和上面 映射目录 保持一致
       - DS_NOVNC_URL=
     shm_size: "1gb"
     restart: unless-stopped
