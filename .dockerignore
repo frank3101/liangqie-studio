@@ -1,0 +1,10 @@
+node_modules/
+__pycache__/
+*.pyc
+data/
+logs/
+shot_*.png
+build/
+dist/
+*.md
+.git/

@@ -1,0 +1,850 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>亮切工坊</title>
+<link rel="stylesheet" href="style.css">
+<link rel="icon" type="image/png" sizes="256x256" href="app_icon.png">
+<link rel="shortcut icon" type="image/png" href="app_icon.png">
+<link rel="apple-touch-icon" sizes="180x180" href="app_icon.png">
+<meta name="theme-color" content="#1F2329">
+</head>
+<body>
+<div id="layout">
+
+  <!-- 菜单栏 展示/隐藏（手机上抽屉式） -->
+  <button id="sb-toggle" title="收起 / 展开菜单" aria-label="切换菜单栏">
+    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor"
+         stroke-width="2" stroke-linecap="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+  </button>
+
+  <!-- ================= 侧栏 ================= -->
+  <aside id="sidebar">
+    <div class="brand">
+      <img class="brand-logo" src="logo.png" alt="亮切工坊">
+      <div class="brand-txt">
+        <h1>亮切工坊</h1>
+        <p>账号 · 素材 · 发布 · 申诉</p>
+      </div>
+    </div>
+    <nav>
+      <div class="nav-item active" data-page="accounts">
+        <span class="ico">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"
+               stroke-linecap="round" stroke-linejoin="round">
+            <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
+            <circle cx="9" cy="7" r="4"/>
+            <path d="M22 21v-2a4 4 0 0 0-3-3.87"/>
+            <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+          </svg>
+        </span>
+        <span class="nav-txt">账号管理</span>
+      </div>
+      <div class="nav-item" data-page="material">
+        <span class="ico">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"
+               stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="6" cy="6" r="3"/>
+            <circle cx="6" cy="18" r="3"/>
+            <path d="M20 4 8.12 15.88M14.47 14.48 20 20M8.12 8.12 12 12"/>
+          </svg>
+        </span>
+        <span class="nav-txt"><b class="step">1</b>素材处理</span>
+      </div>
+      <div class="nav-item" data-page="publish">
+        <span class="ico">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"
+               stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <path d="M17 8l-5-5-5 5"/><path d="M12 3v13"/>
+          </svg>
+        </span>
+        <span class="nav-txt"><b class="step">2</b>作品发布</span>
+      </div>
+      <div class="nav-item" data-page="appeal">
+        <span class="ico">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"
+               stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+            <path d="M12 8v4"/><path d="M12 16h.01"/>
+          </svg>
+        </span>
+        <span class="nav-txt"><b class="step">3</b>作品申诉</span>
+      </div>
+      <div class="nav-group" id="nav-buyin">
+        <div class="nav-item nav-parent" data-group="buyin">
+          <span class="ico">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"
+                 stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 2 4 5v6c0 5.2 3.4 9.4 8 10.9 4.6-1.5 8-5.7 8-10.9V5l-8-3z"/>
+              <path d="m9 12 2 2 4-4"/>
+            </svg>
+          </span>
+          <span class="nav-txt"><b class="step">4</b>电商违规申诉
+            <svg class="caret" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="m6 9 6 6 6-6"/>
+            </svg>
+          </span>
+        </div>
+        <div class="nav-sub">
+          <div class="nav-item sub" data-page="buyin-mat">
+            <span class="dot"></span><span class="nav-txt">申诉材料</span>
+          </div>
+          <div class="nav-item sub" data-page="buyin-set">
+            <span class="dot"></span><span class="nav-txt">申诉设置</span>
+          </div>
+          <div class="nav-item sub" data-page="buyin-log">
+            <span class="dot"></span><span class="nav-txt">运行日志</span>
+          </div>
+        </div>
+      </div>
+      <div class="nav-item" data-page="vnc">
+        <span class="ico">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"
+               stroke-linecap="round" stroke-linejoin="round">
+            <rect x="2" y="3" width="20" height="14" rx="2"/>
+            <path d="M8 21h8M12 17v4"/>
+          </svg>
+        </span>
+        <span class="nav-txt">浏览器画面</span>
+      </div>
+    </nav>
+    <div class="spacer"></div>
+    <div class="side-footer">
+      <div id="env-label"></div>
+      <div class="side-actions">
+        <div class="side-link" data-page="wecom" title="企业微信互通">
+          <span class="ico">
+            <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor"
+                 stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/>
+            </svg>
+          </span>
+          <span class="side-txt">企微互通</span>
+        </div>
+        <div class="side-link" data-page="settings" title="设置">
+          <span class="ico">
+            <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor"
+                 stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="3"/>
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h.09a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.09a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+            </svg>
+          </span>
+          <span class="side-txt">设置</span>
+        </div>
+        <div class="side-link" id="logout-link" title="退出登录">
+          <span class="ico">
+            <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor"
+                 stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+              <polyline points="16 17 21 12 16 7"/>
+              <line x1="21" y1="12" x2="9" y2="12"/>
+            </svg>
+          </span>
+          <span class="side-txt">退出登录</span>
+        </div>
+      </div>
+    </div>
+  </aside>
+  <div id="sb-mask"></div>
+
+  <!-- ================= 主区域 ================= -->
+  <div id="main">
+
+    <!-- ======== 账号管理 ======== -->
+    <section class="page active" id="page-accounts">
+      <div class="page-title">账号管理</div>
+      <div class="page-desc">每个账号一个独立 Chrome 环境（Cookie 完全隔离）。「打开浏览器」后可在「浏览器画面」里手动扫码、手动操作，脚本执行时会接管同一个窗口。「检测登录」会顺便从创作者中心采集粉丝数。</div>
+      <div class="row">
+        <span class="btn primary" onclick="accAddDialog()">＋ 新增账号</span>
+        <span class="btn" onclick="accImportDialog()">导入已有账号</span>
+        <span style="width:12px"></span>
+        <span class="btn" onclick="accBulk('open')">打开浏览器</span>
+        <span class="btn" onclick="accBulk('check')">检测登录</span>
+        <span class="btn" onclick="accBulk('close')">关闭浏览器</span>
+        <span style="width:12px"></span>
+        <span class="btn" onclick="accBuyinCheck()">电商申诉检查</span>
+        <span style="width:12px"></span>
+        <span class="btn" onclick="accBulk('edit')">编辑</span>
+        <span class="btn danger" onclick="accBulk('delete')">删除</span>
+        <span class="grow"></span>
+        <span id="vnc-link" class="btn small" onclick="gotoVnc()">查看浏览器画面</span>
+      </div>
+      <div class="card sect" style="height: calc(100% - 170px - var(--log-h)); min-height: 200px; display:flex; flex-direction:column;">
+        <div class="tbl-wrap" style="flex:1">
+          <table class="grid" id="acc-table">
+            <thead><tr>
+              <th style="width:150px">账号名称</th><th style="width:110px">备注</th>
+              <th class="center" style="width:90px" title="点「检测登录」时顺带从创作者中心采集">粉丝数</th>
+              <th style="width:90px">浏览器</th><th style="width:150px">登录状态</th>
+              <th style="width:150px">电商申诉</th><th class="center" style="width:80px">今日申诉</th>
+              <th>Profile 目录</th>
+            </tr></thead>
+            <tbody id="acc-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="logcard">
+        <div class="log-title">运行日志</div>
+        <div class="logbox" id="log-accounts"></div>
+      </div>
+    </section>
+
+    <!-- ======== 素材处理（采集 + 剪辑） ======== -->
+    <section class="page" id="page-material">
+      <div class="page-title">素材处理 <span class="badge" id="mat-badge">空闲</span></div>
+      <div class="page-desc">采集 = 禅选「创作灵感」原画下载（无暗水印）；剪辑 = 模板混剪出成品。禅选登录环境独立，与发布/申诉账号互不干扰。</div>
+
+      <div class="row">
+        <span class="muted">输出目录</span>
+        <input class="txt flex" id="mat-out" onblur="matSaveOut()">
+        <span class="btn" onclick="fsBrowse(document.getElementById('mat-out').value, 'mat-out')">选择目录</span>
+        <span class="btn primary" onclick="matAct('open_browser')">打开环境浏览器</span>
+        <span class="btn" onclick="matAct('check_login')">检测登录</span>
+      </div>
+
+      <div class="row mat-split">
+        <div class="grow mat-left">
+          <div class="muted mat-hint">商品清单（左=商品ID，右=标题；双击可编辑）。「从橱窗导入商品」「从选品车导入商品」自动填入商品，已下架自动排除</div>
+          <div class="card" id="ptable">
+            <div class="ptable-scroll">
+              <table class="grid" id="ptable-grid">
+                <thead><tr><th style="width:50px">序号</th><th style="width:34%">商品ID</th><th>商品标题</th></tr></thead>
+                <tbody id="ptable-tbody"></tbody>
+              </table>
+            </div>
+            <div class="pinfo"><span id="ptable-info">清单是空的</span><span class="del" id="ptable-del" onclick="pDelSelected()">删除选中</span></div>
+          </div>
+        </div>
+        <div class="vbtns">
+          <span class="btn" onclick="matImportShopwindow()">从橱窗<br>导入商品</span>
+          <span class="btn" onclick="matImportCart()">从选品车<br>导入商品</span>
+          <span class="btn" onclick="matCartCleanup()">清理<br>选品车</span>
+          <span class="btn" onclick="matAct('backfill')">补全<br>商品信息</span>
+          <span class="btn" onclick="matAct2('/api/material/products',{action:'clear'},refreshMaterial)">清空清单</span>
+        </div>
+      </div>
+
+      <div class="row">
+        <span class="muted">每商品毛料</span><input type="number" class="spin" id="mat-max" min="1" max="10">
+        <label class="chk"><input type="checkbox" id="mat-autoclip"> 采后自动剪辑</label>
+        <label class="chk"><input type="checkbox" id="mat-autocopy"> 出片自动生成文案</label>
+        <span class="muted">每商品出片</span><input type="number" class="spin" id="mat-count" min="1" max="5">
+        <label class="chk"><input type="checkbox" id="mat-face"> 拒主播出镜</label>
+        <label class="chk"><input type="checkbox" id="mat-still"> 拒静止画面</label>
+        <span class="btn" onclick="matSaveSettings()">保存设置</span>
+      </div>
+
+      <div class="row">
+        <span class="btn primary" id="mat-btn-one" onclick="matCollect(true)">⚡ 一键采集+剪辑</span>
+        <span class="btn" id="mat-btn-collect" onclick="matCollect(false)">① 仅采集</span>
+        <span class="btn" id="mat-btn-clip" onclick="matAct('clip')">② 仅剪辑已有素材</span>
+        <span class="btn danger" id="mat-btn-stop" onclick="matAct('stop')">停止</span>
+        <span class="btn" onclick="matCleanEmpty()">清除空壳文件夹</span>
+        <span class="btn" onclick="matCleanNoClip()">清空无成品文件夹</span>
+      </div>
+
+      <div class="card sect">
+        <div class="tbl-wrap" style="max-height:170px">
+          <table class="grid" id="mat-table">
+            <thead><tr><th style="width:200px">商品ID</th><th>商品标题</th><th style="width:100px">状态</th>
+              <th style="width:70px">毛料</th><th style="width:70px">成品</th></tr></thead>
+            <tbody id="mat-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="logcard">
+        <div class="log-title">运行日志</div>
+        <div class="logbox" id="log-material"></div>
+      </div>
+    </section>
+
+    <!-- ======== 作品发布 ======== -->
+    <section class="page" id="page-publish">
+      <div class="page-title">作品发布 <span class="badge" id="pub-badge">空闲</span></div>
+      <div class="page-desc">一条成品 = 一条作品。发布时接管「账号管理」里已登录的浏览器窗口，按账号依次发布，随时可以人工接管。和「电商违规申诉」可以同时跑：同一个号只开一个浏览器，两边各用一个标签页，互不打断。</div>
+
+      <div class="row">
+        <span class="muted">素材目录</span>
+        <input class="txt flex" id="pub-out" onblur="pubSaveOut()">
+        <span class="btn" onclick="fsBrowse(document.getElementById('pub-out').value, 'pub-out')">选择目录</span>
+        <span class="btn" onclick="pubOpenDir()">打开目录</span>
+        <span class="btn danger" onclick="pubClearPublished()">清除已发布</span>
+        <span class="btn primary" onclick="pubReload(true)">重新扫描</span>
+      </div>
+
+      <div class="card sect pad">
+        <div class="row" style="margin-top:0">
+          <span class="muted grow">参与发布的账号（Ctrl 多选，默认全选）「封面」「每日上限」双击可改。A02 这种在发布者中心必须设封面的号才需要勾封面</span>
+          <span class="btn small" onclick="pubSelectAll()">全选</span>
+          <span class="btn small" onclick="pubSelectNone()">全不选</span>
+          <span class="btn small" onclick="pubOpenBrowsers()">打开浏览器</span>
+          <span class="btn small" onclick="pubToggleCover()">切换封面</span>
+          <span class="btn small" onclick="pubEditLimit()">设置上限</span>
+        </div>
+        <div class="tbl-wrap" style="margin-top:6px">
+          <table class="grid" id="pub-acc-table">
+            <thead><tr><th style="width:110px">账号</th><th style="width:150px">昵称</th>
+              <th class="center" style="width:80px">今日已发</th><th class="center" style="width:80px">每日上限</th>
+              <th class="center" style="width:80px">今日剩余</th><th class="center" style="width:80px">封面</th></tr></thead>
+            <tbody id="pub-acc-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="row">
+        <label class="chk"><input type="checkbox" id="pub-cart"> 挂购物车</label>
+        <span class="muted">挂车失败时</span>
+        <select class="txt" id="pub-cartfail" style="width:170px"
+                title="跳过这条作品：这条判失败，继续下一条；某个号整体挂不了车（如被限制挂车）就跳过这个号，作品交给后面的号继续发">
+          <option value="skip_item">跳过这条作品</option>
+          <option value="no_cart">不挂车继续发</option>
+          <option value="abort">中止整批</option>
+        </select>
+        <label class="chk"><input type="checkbox" id="pub-dry"> 演练(不点发布)</label>
+        <label class="chk"><input type="checkbox" id="pub-appeal"> 发布后立即申诉</label>
+        <span class="btn small" onclick="pubSaveSettings()">保存设置</span>
+        <span class="muted">（申诉描述、材料在「作品申诉」里设置）</span>
+      </div>
+
+      <div class="row">
+        <label class="radio"><input type="radio" name="pub-mode" value="now" checked> 立即发布</label>
+        <label class="radio"><input type="radio" name="pub-mode" value="schedule"> 定时发布</label>
+        <input class="txt" id="pub-when" style="width:150px">
+        <span class="muted">间隔</span>
+        <input type="number" class="spin" id="pub-interval" min="1" max="240" style="width:60px">
+        <span class="muted">分钟（仅定时发布时生效）</span>
+      </div>
+
+      <div class="row">
+        <span class="btn" id="pub-btn-gen" onclick="pubGenCopy()">① 生成文案</span>
+        <span class="btn" id="pub-btn-edit" onclick="pubEditCopy()">编辑文案</span>
+        <span class="btn" onclick="pubCopyPrompt()">复制AI提示词</span>
+        <span class="btn" onclick="pubPasteDialog()">粘贴导入文案</span>
+        <select class="txt" id="pub-topics" onchange="pubTopicModeChange()"></select>
+        <span class="btn small" onclick="pubFixedTopicsDialog()">编辑固定话题</span>
+        <span class="muted" id="pub-fixed-lbl"></span>
+      </div>
+
+      <div class="row">
+        <span class="btn primary" id="pub-btn-go" onclick="pubStart()">② 开始发布</span>
+        <span class="btn danger" id="pub-btn-stop" onclick="api('/api/publish/stop',{})">停止</span>
+        <span class="muted">文案满意后再点开始发布；不发就先「演练」跑一遍</span>
+      </div>
+
+      <div class="card sect">
+        <div class="tbl-wrap" style="max-height:190px">
+          <table class="grid" id="pub-table">
+            <thead><tr><th style="width:140px">商品ID</th><th style="width:220px">商品标题</th>
+              <th style="width:150px">成品</th><th style="width:220px">文案标题</th><th style="width:110px">状态</th></tr></thead>
+            <tbody id="pub-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="logcard">
+        <div class="log-title">运行日志</div>
+        <div class="logbox" id="log-publish"></div>
+      </div>
+    </section>
+
+    <!-- ======== 作品申诉 ======== -->
+    <section class="page" id="page-appeal">
+      <div class="page-title">作品申诉 <span class="badge" id="ap-badge">空闲</span></div>
+      <div class="page-desc">⚠️ 每个作品只有一次申诉机会：只处理「限制自己可见」且违规原因命中关键词的作品，已申诉过的绝不重复提交。发布页勾了「发布后立即申诉」时用的也是这里的描述和材料。</div>
+
+      <div class="card sect pad">
+        <div class="row" style="margin-top:0">
+          <span class="grow" id="ap-rules" style="font-size:12.5px"></span>
+          <span class="btn small" onclick="apRulesDialog()">编辑申诉规则</span>
+        </div>
+        <div class="row" style="margin-top:6px">
+          <label class="chk"><input type="checkbox" id="ap-alldays"> 也处理非今日作品（置顶老作品）</label>
+          <label class="chk" style="margin-left:24px"><input type="checkbox" id="ap-confirm"> 每条提交前弹窗确认</label>
+        </div>
+        <div class="row" style="margin-top:6px">
+          <label class="chk"><input type="checkbox" id="ap-sched"> 每天定时一键申诉（全部账号依次跑，跳过人工确认）</label>
+          <input type="time" class="txt" id="ap-sched-time" style="width:110px; margin-left:8px">
+          <span class="muted">到点自动开始；材料缺失的账号会被拦下并写日志/推企微</span>
+        </div>
+        <div class="muted" style="margin-top:4px">规则 = 违规原因关键词 + 该原因专用的申诉文案 + 材料子目录（材料根目录/子目录/账号XX）。作品受限后按违规原因命中哪条规则，就用哪套文案和材料。</div>
+        <div class="row">
+          <span class="muted">站外链接(选填)</span>
+          <input class="txt flex" id="ap-link">
+        </div>
+        <div class="row">
+          <span class="muted">材料根目录</span>
+          <input class="txt flex" id="ap-mat">
+          <span class="btn small" onclick="fsBrowse(document.getElementById('ap-mat').value, 'ap-mat')">选择目录</span>
+        </div>
+        <div class="row">
+          <span class="muted">发布后等待秒</span><input type="number" class="spin" id="ap-wait" style="width:64px">
+          <span class="muted">审核中再等秒</span><input type="number" class="spin" id="ap-review" style="width:64px">
+          <span class="muted">轮询间隔秒</span><input type="number" class="spin" id="ap-interval" style="width:64px">
+          <span class="muted">检查总时长秒</span><input type="number" class="spin" id="ap-total" style="width:70px">
+          <span class="btn small" onclick="apSaveSettings()">保存设置</span>
+        </div>
+        <div class="muted" style="margin-top:2px">（节奏参数给「发布后立即申诉」用；账号专属材料目录在 accounts.json 该号的 appeal.材料目录 里配）</div>
+      </div>
+
+      <div class="card sect pad">
+        <div class="row" style="margin-top:0">
+          <span class="muted grow">参与申诉的账号（Ctrl 多选）「材料」列 = 该号在各条规则材料目录里的图片数（按规则顺序显示，如 4/0；某规则为 0 时命中它会被拒绝提交）</span>
+          <span class="btn small" onclick="apSelectAll(true)">全选</span>
+          <span class="btn small" onclick="apSelectAll(false)">全不选</span>
+          <span class="btn small" onclick="apOpenBrowsers()">打开浏览器</span>
+        </div>
+        <div class="tbl-wrap" style="margin-top:6px">
+          <table class="grid" id="ap-acc-table">
+            <thead><tr><th style="width:110px">账号</th><th style="width:150px">昵称</th>
+              <th class="center" style="width:110px">材料</th><th class="center" style="width:90px">历史申诉</th></tr></thead>
+            <tbody id="ap-acc-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="row">
+        <span class="btn" id="ap-btn-scan" onclick="apScan()">扫描受限作品(不提交)</span>
+        <span class="btn primary" id="ap-btn-go" onclick="apAppeal()">一键申诉</span>
+        <span class="btn" id="ap-btn-queue" onclick="apQueue()">处理复查队列</span>
+        <span class="btn danger" id="ap-btn-stop" onclick="apAction('stop')">停止</span>
+      </div>
+
+      <div class="logcard">
+        <div class="log-title">运行日志</div>
+        <div class="logbox" id="log-appeal"></div>
+      </div>
+    </section>
+
+    <!-- ======== 电商违规申诉 · 申诉材料 ======== -->
+    <section class="page" id="page-buyin-mat">
+      <div class="page-title">电商违规申诉 · 申诉材料</div>
+      <div class="page-desc">处理的是巨量百应后台「违规处置」里的带货违规单，和「作品申诉」是两套。每个号两套材料：<b>box1</b> = 申诉页第 1 个上传框（授权书 / 肖像保护截图等），<b>box2</b> = 第 2 个上传框（按要求提交的材料）。文件名按自然顺序排，一次选多张会全部带上。</div>
+
+      <div class="row" id="bym-acc-row"></div>
+
+      <div class="row mat-split">
+        <div class="card pad grow" style="min-width:0">
+          <div class="row" style="margin-top:0">
+            <b>box1 · 授权证明</b>
+            <span class="muted" id="bym-c1"></span>
+            <span class="grow"></span>
+            <span class="btn primary small" onclick="document.getElementById('bym-f1').click()">上传图片</span>
+            <input type="file" id="bym-f1" multiple accept="image/*,.pdf" style="display:none"
+                   onchange="bymUpload('box1', this)">
+          </div>
+          <div class="mat-grid" id="bym-box1"></div>
+        </div>
+        <div class="card pad grow" style="min-width:0">
+          <div class="row" style="margin-top:0">
+            <b>box2 · 申诉材料</b>
+            <span class="muted" id="bym-c2"></span>
+            <span class="grow"></span>
+            <span class="btn primary small" onclick="document.getElementById('bym-f2').click()">上传图片</span>
+            <input type="file" id="bym-f2" multiple accept="image/*,.pdf" style="display:none"
+                   onchange="bymUpload('box2', this)">
+          </div>
+          <div class="mat-grid" id="bym-box2"></div>
+        </div>
+      </div>
+      <div class="muted" style="margin-top:8px" id="bym-hint">材料目录：/data/materials/&lt;账号&gt;/box1、box2 —— 和原来的百应申诉模块完全一致，旧图片可以直接搬过来。</div>
+    </section>
+
+    <!-- ======== 电商违规申诉 · 申诉设置 ======== -->
+    <section class="page" id="page-buyin-set">
+      <div class="page-title">电商违规申诉 · 申诉设置 <span class="badge" id="byn-badge">空闲</span></div>
+      <div class="page-desc">后台按间隔自动检查每个号的「违规处置」，发现可申诉的违规单就自动提交（材料在「申诉材料」里配）。用的是账号管理里同一个浏览器和登录态，和「作品发布」可以同时跑（各开一个标签页，互不打断）；只在「作品申诉」「素材处理」在跑时错开。</div>
+
+      <div class="card sect pad">
+        <div class="row" style="margin-top:0">
+          <label class="chk"><input type="checkbox" id="byn-auto"> 自动巡检</label>
+          <span class="muted">默认间隔</span><input type="number" class="spin" id="byn-interval" min="60" style="width:76px">
+          <span class="muted">秒</span>
+          <label class="chk" style="margin-left:14px"><input type="checkbox" id="byn-daily"> 每天定时检查</label>
+          <input type="time" class="txt" id="byn-daily-time" style="width:110px">
+          <span class="muted">失败重试上限</span><input type="number" class="spin" id="byn-retry" min="1" style="width:56px">
+        </div>
+        <div class="row">
+          <label class="chk"><input type="checkbox" id="byn-appeal"> 自动申诉（关掉就只检查不提交）</label>
+          <label class="chk" style="margin-left:14px"><input type="checkbox" id="byn-confirm"> 每条提交前弹窗确认</label>
+          <label class="chk" style="margin-left:14px"><input type="checkbox" id="byn-push"> 异常/失败才推企微</label>
+          <span class="grow"></span>
+          <span class="btn" onclick="bynSaveSettings()">保存设置</span>
+        </div>
+        <div class="row" style="align-items:flex-start">
+          <span class="muted" style="padding-top:6px">统一申诉理由</span>
+          <textarea id="byn-reason" rows="3" style="flex:1; border:1px solid var(--line); border-radius:4px; padding:7px 8px; font-family:inherit; font-size:12.5px"></textarea>
+        </div>
+        <div class="muted" style="margin-top:4px">某个号想用不同理由，在下面表格的「申诉理由」列单独填；留空 = 用统一理由。</div>
+      </div>
+
+      <div class="card sect pad">
+        <div class="row" style="margin-top:0">
+          <span class="muted grow">账号（和「账号管理」是同一份列表）—— 直接改「启用 / 间隔 / 申诉理由」，改完自动保存；间隔填 0 = 跟随上面的默认间隔</span>
+          <span class="btn small" onclick="bynCheck([])">全部立即检查</span>
+          <span class="btn danger small" onclick="bynStop()">停止</span>
+        </div>
+        <div class="tbl-wrap" style="margin-top:6px">
+          <table class="grid" id="bys-table">
+            <thead><tr>
+              <th style="width:90px">账号</th><th style="width:110px">备注</th>
+              <th class="center" style="width:60px">启用</th>
+              <th class="center" style="width:100px">间隔(秒)</th>
+              <th style="width:260px">申诉理由（空=统一）</th>
+              <th class="center" style="width:70px">材料</th>
+              <th style="width:150px">电商申诉状态</th>
+              <th class="center" style="width:80px">今日申诉</th>
+              <th style="width:150px">操作</th>
+            </tr></thead>
+            <tbody id="bys-tbody"></tbody>
+          </table>
+        </div>
+        <div class="muted" style="margin-top:6px" id="bys-tip"></div>
+      </div>
+    </section>
+
+    <!-- ======== 电商违规申诉 · 运行日志 ======== -->
+    <section class="page" id="page-buyin-log">
+      <div class="page-title">电商违规申诉 · 运行日志 <span class="badge" id="byn-badge2">空闲</span></div>
+      <div class="page-desc">每条违规单的处理结果都记在这里（也写进 state/buyin/&lt;账号&gt;.json）。今日申诉 = 今天提交成功并核实的条数。</div>
+
+      <div class="card sect pad">
+        <div class="row" style="margin-top:0">
+          <span id="byl-stats" style="font-size:12.5px; line-height:1.8"></span>
+          <span class="grow"></span>
+          <span class="btn small" onclick="bynCheck([])">全部立即检查</span>
+          <span class="btn danger small" onclick="bynStop()">停止</span>
+        </div>
+      </div>
+
+      <div class="logcard">
+        <div class="log-title">运行日志</div>
+        <div class="logbox" id="log-buyin"></div>
+      </div>
+
+      <div class="card sect pad">
+        <div class="row" style="margin-top:0">
+          <b>违规记录</b>
+          <select class="txt" id="byl-acc" onchange="bynLoadRecords()" style="width:120px"></select>
+          <span class="muted" id="byl-count"></span>
+          <span class="grow"></span>
+          <span class="btn small" onclick="bynLoadRecords()">刷新</span>
+        </div>
+        <div class="tbl-wrap" style="margin-top:6px; max-height:300px">
+          <table class="grid">
+            <thead><tr><th style="width:190px">违规单ID</th><th>违规原因</th><th style="width:330px">处理结果</th>
+              <th style="width:150px">发现时间</th><th style="width:150px">成功时间</th></tr></thead>
+            <tbody id="byl-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ======== 浏览器画面（noVNC） ======== -->
+    <section class="page" id="page-vnc">
+      <div class="page-title">浏览器画面</div>
+      <div class="page-desc">这是容器里的虚拟屏幕：所有账号的 Chrome 窗口都开在这里。可以扫码登录、手动接管脚本正在操作的页面。若画面没出现，点 <b>连接</b> 或用右侧全屏按钮。</div>
+      <div class="row">
+        <span class="btn" onclick="loadVnc(true)">连接 / 刷新</span>
+        <span class="btn" onclick="loadVncFullscreen()">全屏打开</span>
+      </div>
+      <div class="sect" style="position:relative; height:calc(100vh - 230px); border:1px solid var(--line); border-radius:6px; background:#000;">
+        <iframe id="vnc-frame" style="position:absolute; inset:0; width:100%; height:100%; border:none; background:#000;"></iframe>
+        <div id="vnc-tip" style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center; color:#aaa; font-size:13px;">
+          点击「连接 / 刷新」加载画面
+        </div>
+      </div>
+    </section>
+
+    <!-- ======== 企微互通 ======== -->
+    <section class="page" id="page-wecom">
+      <div class="page-title">企微互通 <span class="badge" id="wecom-badge">未启用</span></div>
+      <div class="page-desc">在手机企业微信里给应用发消息就能控制本机：查账号状态、一键采集、发布、定时发布、违规申诉；长任务跑完把成绩单推到你手机。</div>
+
+      <div class="card sect pad">
+        <div class="wstep">
+          <span class="wnum">1</span><span class="wtitle">创建企微自建应用</span>
+          <span class="wtip">只需一次，凭证长期有效</span>
+        </div>
+        <div class="phint" style="margin-top:8px">
+          电脑打开 <b>work.weixin.qq.com</b> 管理后台 →【应用管理】→【自建】→【创建应用】（名称随意，如「亮切工坊」，Logo 可不上传）
+          → 创建后记下页面上的 <b>应用AgentId</b>；「我的企业」页最底部复制 <b>企业ID</b>；
+          应用详情点「查看 Secret」，用微信确认后拿到 <b>应用Secret</b>。想在<b>微信</b>（不用装企业微信 App）里收发，去「我的企业 → 微信插件」用微信扫码关注即可。
+        </div>
+        <div class="row">
+          <a class="btn" href="https://work.weixin.qq.com/wework_admin/frame#apps" target="_blank" rel="noopener">打开企微管理后台 · 应用管理</a>
+          <span class="muted">企业ID 在「我的企业 → 企业信息」最下面</span>
+        </div>
+      </div>
+
+      <div class="card sect pad">
+        <div class="wstep">
+          <span class="wnum">2</span><span class="wtitle">云服务器中转（API 可信 IP · 回调直达）</span>
+          <span class="wtip">一次配好，两个工坊共用</span>
+        </div>
+        <div class="phint" style="margin-top:8px">
+          NAS 家宽 IP 会变，企微只认「企业可信 IP」里登记过的地址，所以两台 docker 共用一台云服务器做中转：
+          出站从云服务器出去（可信 IP 只填它一个），企微回调也由它转进来。和 MoviePilot 的「消息推送代理」同款用法，末尾不加 /，也可以直接填 wxchat 地址；留空 = 直连企微。
+        </div>
+        <div class="row">
+          <span class="muted wlb">消息推送代理</span>
+          <input class="txt flex" id="wecom-api-base" placeholder="如 http://云服务器IP（wxchat/微信代理根地址，末尾不加 /；留空 = 直连）" oninput="wecomSyncCallback()">
+          <span class="btn" onclick="wecomTestRelay()">测试中转</span>
+          <span class="muted" id="wecom-relay-state"></span>
+        </div>
+        <div class="row">
+          <span class="muted wlb">回调地址</span>
+          <input class="txt flex" id="wecom-callback-url" placeholder="http://云服务器IP:9000/wecom/callback">
+          <span class="btn" onclick="wecomCopyCallback()">复制</span>
+          <span class="muted">填到企微后台「接收消息」</span>
+        </div>
+      </div>
+
+      <div class="card sect pad">
+        <div class="wstep">
+          <span class="wnum">3</span><span class="wtitle">填入凭证并验证</span>
+          <span class="wtip">应用Secret / EncodingAESKey 留空 = 沿用已保存的</span>
+        </div>
+        <div class="row">
+          <span class="muted wlb">企业ID</span>
+          <input class="txt" id="wecom-corpid" style="width:250px" placeholder="我的企业 → 企业信息 → 企业ID">
+          <span class="muted wlb" style="margin-left:6px">应用Secret</span>
+          <input class="txt" id="wecom-secret" style="width:230px" placeholder="应用详情 → 查看 Secret">
+          <span class="muted wlb" style="margin-left:6px">应用AgentId</span>
+          <input class="txt" id="wecom-agentid" style="width:130px" placeholder="如 1000002">
+        </div>
+        <div class="row">
+          <span class="muted wlb">Token</span>
+          <input class="txt" id="wecom-token" style="width:250px" placeholder="企微后台接收消息页的 Token">
+          <span class="muted wlb" style="margin-left:6px">EncodingAESKey</span>
+          <input class="txt" id="wecom-aeskey" style="width:300px" placeholder="企微后台接收消息页的 EncodingAESKey">
+        </div>
+        <div class="phint">Token 和 EncodingAESKey 在企微后台【接收消息】页点【随机获取】生成，原样复制到这里，两边完全一致。</div>
+        <div class="row">
+          <span class="muted wlb">监听端口</span>
+          <input class="txt" id="wecom-port" style="width:86px">
+          <span class="muted wlb" style="margin-left:6px">允许的成员</span>
+          <input class="txt" id="wecom-users" style="width:160px" placeholder="userid 逗号分隔，空 = 不限">
+        </div>
+        <div class="row">
+          <label class="chk"><input type="checkbox" id="wecom-enabled"> 启用企微互通（保存后立即生效 / 重启回调服务）</label>
+          <span class="muted" id="wecom-state"></span>
+        </div>
+      </div>
+
+      <div class="row" style="margin-top:12px">
+        <span class="btn primary" onclick="wecomSave()">保存并应用</span>
+        <span class="btn" onclick="wecomTest()">发送测试消息</span>
+        <span class="muted" id="wecom-saved"></span>
+      </div>
+
+      <div class="card sect pad">
+        <div class="phead">手机里能发这些指令 <span class="phead-sub">直接发文字就行</span></div>
+        <div class="phint" style="background:var(--field); padding:8px 10px; border-radius:6px; line-height:1.8; margin-top:8px">
+          <b>状态</b> / <b>发布</b> / <b>定时发布 11-25 07:00</b> / <b>采集</b> /
+          <b>剪辑</b> / <b>生成文案</b> / <b>申诉</b>（先回清单，回「确认」才提交）/ <b>取消</b> / <b>停止</b> / <b>帮助</b><br>
+          <b>发布</b>和<b>定时发布</b>不默认发全部号：发指令后列出账号（带今日已发/剩余），回编号或账号名选号，
+          如 <code>1 3</code>、<code>A01 A03</code>，回 <code>全部</code> 才是所有号，15 分钟内有效；
+          也可以一步到位 <code>发布 A02</code>、<code>定时发布 11-25 07:00 A02</code>。<br>
+          定时只认绝对时间：<code>11-25 07:00</code> 或 <code>2026-11-25 07:00</code>，最多提前 14 天。
+        </div>
+      </div>
+
+      <div class="logcard">
+        <div class="log-title">推送日志（推送成功 / 失败、收到指令都记在这里）</div>
+        <div class="logbox" id="log-wecom"></div>
+      </div>
+    </section>
+
+    <!-- ======== 设置 ======== -->
+    <section class="page" id="page-settings">
+      <div class="page-title">设置</div>
+      <div class="page-desc">浏览器路径和文案大模型。改完点下面的「保存」。</div>
+
+      <div class="card sect pad">
+        <div class="phead">浏览器</div>
+        <div class="phint">容器里默认已装 Chromium（/usr/bin/chromium），一般不用改。多账号隔离要求每个账号用独立 user-data-dir。</div>
+        <div class="row">
+          <span class="muted" style="width:80px">浏览器路径</span>
+          <input class="txt flex" id="set-chrome">
+        </div>
+        <div class="phint" style="margin-top:6px">当前使用：<span id="set-chrome-found"></span></div>
+      </div>
+
+      <div class="card sect pad">
+        <div class="phead">报错截图</div>
+        <div class="phint">发布 / 申诉 / 电商申诉出错时自动截图的位置，只截图不负责清理。想放其他硬盘：先在 docker-compose.yml 里把那块盘挂进容器（比如 - /vol1/1000/screenshots:/shots），再在这里填容器内路径 /shots。改动即时生效，不用重启。</div>
+        <div class="row">
+          <span class="muted" style="width:80px">截图目录</span>
+          <input class="txt flex" id="set-shots" placeholder="留空 = 数据目录下 screenshots">
+        </div>
+        <div class="phint" style="margin-top:6px">当前使用：<span id="set-shots-cur"></span></div>
+      </div>
+
+      <div class="card sect pad">
+        <div class="phead">文案大模型 <span class="phead-sub">生成抖音带货文案；不填 Key 会退回本地模板，文案比较死板</span></div>
+        <div class="row">
+          <span class="muted llm-lb">服务商</span>
+          <select class="txt" id="set-llm-provider" style="width:280px"></select>
+          <span class="muted llm-lb" style="margin-left:10px">模型</span>
+          <input class="txt" id="set-llm-model" list="set-llm-model-list" style="width:262px"
+                 placeholder="填模型名，如 deepseek-chat" autocomplete="off" spellcheck="false">
+          <datalist id="set-llm-model-list"></datalist>
+          <span class="btn small" onclick="llmSyncModels(true)">同步模型列表</span>
+        </div>
+        <div class="phint" id="set-llm-model-hint" style="margin-top:6px"></div>
+        <div class="row">
+          <span class="muted llm-lb">API Key</span>
+          <input class="txt flex" id="set-llm-key" type="password" placeholder="粘贴 Key（留空=沿用已存的）">
+          <span class="btn small" onclick="testLlm()">测试连接</span>
+          <span class="llm-warn" id="set-llm-warn"></span>
+        </div>
+        <div class="row">
+          <span class="muted llm-lb">接口地址</span>
+          <input class="txt flex" id="set-llm-base">
+          <span class="phint" style="margin:0" id="set-llm-base-hint">选服务商自动填好，一般不用改</span>
+        </div>
+        <div class="row"><label class="chk"><input type="checkbox" id="set-llm-on"> 启用大模型生成文案</label></div>
+        <div class="llm-tip" id="set-llm-tip"></div>
+        <div class="muted" id="set-llm-result" style="margin-top:6px"></div>
+      </div>
+
+      <div class="row">
+        <span class="btn primary" onclick="saveSettings()">保存</span>
+        <span class="muted" id="set-saved"></span>
+      </div>
+    </section>
+
+  </div>
+</div>
+
+<!-- ================= 弹窗们 ================= -->
+
+<!-- 确认 -->
+<div class="modal-mask" id="confirm-modal">
+  <div class="modal">
+    <h2>请确认</h2>
+    <div id="confirm-msg"></div>
+    <div class="foot">
+      <span class="btn" onclick="confirmAnswer(false)">否</span>
+      <span class="btn primary" onclick="confirmAnswer(true)">是</span>
+    </div>
+  </div>
+</div>
+
+<!-- 提示 -->
+<div class="modal-mask" id="alert-modal">
+  <div class="modal" style="max-width:520px">
+    <h2 id="alert-title">提示</h2>
+    <div id="alert-msg" style="white-space:pre-wrap; font-size:13px; line-height:1.7"></div>
+    <div class="foot"><span class="btn primary" onclick="hideModal('alert-modal')">好</span></div>
+  </div>
+</div>
+
+<!-- 新增/编辑账号 -->
+<div class="modal-mask" id="acc-modal">
+  <div class="modal" style="max-width:560px">
+    <h2 id="acc-modal-title">新增账号</h2>
+    <div class="form-row"><label>账号名称</label><input class="txt flex" id="acc-name"></div>
+    <div class="form-row"><label>备注</label><input class="txt flex" id="acc-note"></div>
+    <div class="form-row"><label>Profile 目录</label><input class="txt flex" id="acc-profile" placeholder="留空自动用 profiles/账号名"></div>
+    <div class="form-row"><label>调试端口</label><input class="txt" id="acc-port" style="width:110px" placeholder="留空自动分配"></div>
+    <div class="hint">Profile 目录留空则自动用 profiles/&lt;账号名&gt;；端口留空自动分配。复用旧登录态：把 Profile 目录指向已有的 profiles/账号A01 即可。</div>
+    <div class="foot">
+      <span class="btn" onclick="hideModal('acc-modal')">取消</span>
+      <span class="btn primary" onclick="accSave()">保存</span>
+    </div>
+  </div>
+</div>
+
+<!-- 导入已有账号 -->
+<div class="modal-mask" id="import-modal">
+  <div class="modal" style="max-width:560px">
+    <h2>导入已有账号</h2>
+    <div class="hint">下面是数据目录 profiles/ 里还没加入列表的 Chrome profile（有登录数据的）。勾选要导入的账号：</div>
+    <div id="import-list" style="margin-top:8px; max-height:280px; overflow-y:auto"></div>
+    <div class="foot">
+      <span class="btn" onclick="hideModal('import-modal')">取消</span>
+      <span class="btn primary" onclick="importSave()">导入</span>
+    </div>
+  </div>
+</div>
+
+
+<!-- 编辑文案 -->
+<div class="modal-mask" id="copy-modal">
+  <div class="modal" style="max-width:640px">
+    <h2>编辑文案</h2>
+    <div class="muted" id="copy-task-title"></div>
+    <div class="form-row" style="margin-top:10px"><label>标题（≤30字）</label><input class="txt flex" id="copy-title" maxlength="30"></div>
+    <div class="form-row" style="align-items:flex-start"><label>简介（含 #话题）</label>
+      <textarea id="copy-intro" rows="7"></textarea></div>
+    <div class="hint">改完保存后，这条作品的发布就用你写的文案</div>
+    <div class="foot">
+      <span class="btn" onclick="hideModal('copy-modal')">取消</span>
+      <span class="btn primary" onclick="copySave()">保存</span>
+    </div>
+  </div>
+</div>
+
+<!-- 粘贴导入文案 -->
+<div class="modal-mask" id="paste-modal">
+  <div class="modal" style="max-width:760px">
+    <h2>粘贴导入文案</h2>
+    <div class="muted">把 AI 回复的那段 JSON 整段粘进来</div>
+    <div class="hint">格式：[{"id": "商品ID", "标题": "…", "简介": "… #话题1 #话题2 …"}]（带 ```json 包裹也能识别）</div>
+    <textarea id="paste-text" rows="14" style="margin-top:8px; font-family:Consolas,monospace; font-size:12px"></textarea>
+    <div class="hint" id="paste-msg"></div>
+    <div class="foot">
+      <span class="btn primary" onclick="pasteImport()">导入</span>
+      <span class="btn" onclick="hideModal('paste-modal')">关闭</span>
+    </div>
+  </div>
+</div>
+
+<!-- 编辑固定话题 -->
+<div class="modal-mask" id="topics-modal">
+  <div class="modal" style="max-width:520px">
+    <h2>编辑固定话题</h2>
+    <div class="muted">固定话题（1~4 个，用空格或逗号分隔，带不带 # 都行）：</div>
+    <input class="txt flex" id="topics-input" style="margin-top:8px">
+    <div class="hint">例：#贾乃亮 #贾乃亮推荐；固定话题越多，前面留给 AI 的品类话题越少。</div>
+    <div class="foot">
+      <span class="btn" onclick="hideModal('topics-modal')">取消</span>
+      <span class="btn primary" onclick="topicsSave()">保存</span>
+    </div>
+  </div>
+</div>
+
+<!-- 申诉规则编辑器 -->
+<div class="modal-mask" id="rules-modal">
+  <div class="modal" style="max-width:800px">
+    <h2>编辑申诉规则</h2>
+    <div class="hint">作品受限时按违规原因命中关键词：命中哪条规则，就用哪条规则的文案和材料。关键词可填多个（逗号分隔）。材料子目录非空时材料放在 材料根目录/子目录/账号XX。</div>
+    <div id="rules-list" style="margin-top:10px; max-height:52vh; overflow-y:auto"></div>
+    <div class="foot">
+      <span class="btn left" onclick="addRuleRow({})">＋ 添加规则</span>
+      <span class="btn" onclick="hideModal('rules-modal')">取消</span>
+      <span class="btn primary" onclick="rulesSave()">保存</span>
+    </div>
+  </div>
+</div>
+
+<!-- 文件浏览 -->
+<div class="modal-mask" id="fs-modal">
+  <div class="modal" style="max-width:760px">
+    <h2 id="fs-title">选择位置</h2>
+    <div id="fs-crumb"></div>
+    <div id="fs-list"></div>
+    <div class="foot">
+      <span class="muted" id="fs-hint" style="flex:1"></span>
+      <span class="btn primary" id="fs-pick" style="display:none" onclick="fsPickCurrent()">选用此目录</span>
+      <span class="btn" onclick="hideModal('fs-modal')">关闭</span>
+    </div>
+  </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>

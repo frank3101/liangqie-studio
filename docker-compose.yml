@@ -1,0 +1,64 @@
+services:
+  liangqie:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    container_name: liangqie-web
+    ports:
+      - "8000:8000"      # 网页版界面 + API
+      - "6080:6080"      # noVNC 浏览器画面（扫码登录、人工接管）
+      - "8443:8443"      # 企微互通回调（用到才需要暴露）
+    volumes:
+      # 全部数据：账号配置、登录态、素材、文案都在这里
+      - type: bind
+        source: ./data
+        target: /data
+
+      # ---- 额外硬盘 / NAS（素材目录、申诉材料放这里）----
+      # source = 宿主机上的实际路径（Windows 盘符也行，如 Z:/素材），target = 容器内路径
+      # 改 target 要同步改下面的 DS_EXTRA_ROOTS，否则网页里选不到该目录
+      - type: bind
+        source: ${MEDIA_HOST_1:-./mnt/media1}
+        target: /mnt/media1
+      - type: bind
+        source: ${MEDIA_HOST_2:-./mnt/media2}
+        target: /mnt/media2
+
+      # 方式 C（可选）：不经过宿主机盘符，容器直接挂 NAS 的 SMB 共享 —— 见文件底部注释
+      # - type: volume
+      #   source: nas-material
+      #   target: /mnt/media1
+
+    environment:
+      - TZ=Asia/Shanghai
+      # 允许网页「选择目录 / 打开目录」访问的根目录（冒号分隔）。
+      # 新增挂载时把容器内路径加进来，例如 /mnt/media1:/mnt/media2:/mnt/media3
+      - DS_EXTRA_ROOTS=${DS_EXTRA_ROOTS:-/mnt/media1:/mnt/media2}
+      # noVNC 地址（留空 = 前端自动用 http://<主机>:6080/vnc.html；反代场景可自定义）
+      - DS_NOVNC_URL=
+    shm_size: "1gb"      # Chrome 多实例需要更大的共享内存
+    restart: unless-stopped
+
+# ============================================================================
+# 方式 C：容器直接挂 NAS 的 SMB 共享（宿主机不用先映射盘符）
+# 适合 Linux / NAS 上的 Docker；Docker Desktop for Windows 也可用，
+# 但要求 Docker 的 Linux 虚拟机本身能访问到 NAS 地址。
+#
+# 1) 取消上面 volumes 里 `- nas-material:/mnt/media1` 的注释（同时注释掉 bind 那一行）
+# 2) 取消下面的注释并填上你的 NAS 地址与账号
+#
+# volumes:
+#   nas-material:
+#     driver: local
+#     driver_opts:
+#       type: cifs
+#       o: "username=你的账号,password=你的密码,vers=3.0,uid=0,gid=0,iocharset=utf8"
+#       device: "//192.168.1.10/素材"     # NAS 共享路径
+#
+# 方式 D：NFS（群晖/威联通常见）
+#   nas-material:
+#     driver: local
+#     driver_opts:
+#       type: nfs
+#       o: "addr=192.168.1.10,nfsvers=4,rw,nolock,hard"
+#       device: ":/volume1/素材"

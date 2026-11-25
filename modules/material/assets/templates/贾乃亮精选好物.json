@@ -1,0 +1,35 @@
+{
+  "name": "贾乃亮精选好物",
+  "source": "_template/原片/01 (1).mp4",
+  "size": [
+    720,
+    1280
+  ],
+  "fps": 30,
+  "segments": [
+    {
+      "type": "fixed",
+      "start": 0.0,
+      "frames": 192,
+      "label": "固定片头"
+    },
+    {
+      "type": "slot",
+      "name": "产品槽A",
+      "frames": 707
+    },
+    {
+      "type": "fixed",
+      "start": 29.9666667,
+      "frames": 151,
+      "label": "固定中段"
+    },
+    {
+      "type": "slot",
+      "name": "产品槽B",
+      "frames": 336
+    }
+  ],
+  "_note": "固定段时长 6.40s / 5.03s; 音频由 source 原样复制; 总帧数 1386",
+  "_local_copy_note": "本地副本，原 Z 盘路径：Z:/选品处/1—已发布/A02——贾乃亮（精选好物）/0923/新款加厚家用园艺浇水壶大容量洒水壶长嘴园林植物浇花壶喷雾器/01 (1).mp4"
+}
