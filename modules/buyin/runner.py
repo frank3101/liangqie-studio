@@ -150,7 +150,8 @@ def run_account(account: dict, cfg: dict, confirm_fn=None, stop_fn=None,
     pw = browser = page = None
     launched = False
     port = int(account.get("port") or 0)
-    stats = {"found": 0, "retry": 0, "ok": [], "fail": [], "skipped": 0, "miss": []}
+    stats = {"found": 0, "retry": 0, "ok": [], "fail": [], "skipped": 0, "miss": [],
+             "reopened": 0, "stuck": []}
     reason = store.reason_for(cfg, account)
     # 占号期间持租约：发布模块同时在跑也不许把这个浏览器关掉（两边各开一个标签页）
     if port:
@@ -174,7 +175,7 @@ def run_account(account: dict, cfg: dict, confirm_fn=None, stop_fn=None,
         recs = store.load_records(name)
         fetched = {v["order_id"] for v in violations}
 
-        # 自愈：此前报「申诉失败」的单子若已不在可申诉列表，说明提交其实生效了
+        # 自愈 A：此前报「申诉失败」的单子若已不在可申诉列表，说明提交其实生效了
         healed = [oid for oid, r in recs.items()
                   if str(r.get("appeal_result", "")).startswith("申诉失败") and oid not in fetched]
         if healed:
@@ -183,6 +184,21 @@ def run_account(account: dict, cfg: dict, confirm_fn=None, stop_fn=None,
                 recs[oid]["appeal_result"] = "申诉提交成功（核实：已不在可申诉列表）"
                 recs[oid]["appeal_ok_at"] = now_iso
             log(f"[{name}] {len(healed)} 条此前报失败的申诉经核实已生效：{healed}", "OK")
+
+        # 自愈 B（回检）：记录为「已提交成功」但当前仍在可申诉列表 => 上次提交没生效
+        # （提交后核实那一步遇到页面异常会误判成功，这条兜住它，否则会永久静默跳过）
+        reopened = []
+        for v in violations:
+            rec = recs.get(v["order_id"])
+            if not rec:
+                continue
+            if str(rec.get("appeal_result", "")).startswith("申诉提交成功"):
+                rec["appeal_result"] = "申诉失败：提交后仍在可申诉列表（回检未生效）"
+                rec["reopened_at"] = datetime.now().isoformat(timespec="seconds")
+                reopened.append(v["order_id"])
+                log(f"[{name}][{v['order_id']}] 记录显示已提交，但仍出现在可申诉列表 → "
+                    f"判定上次未生效，重新提交", "WARN")
+        stats["reopened"] = len(reopened)
 
         new_items = [v for v in violations if v["order_id"] not in recs]
         retry_cap = int(cfg.get("失败重试上限") or APPEAL_MAX_RETRIES)
@@ -194,6 +210,11 @@ def run_account(account: dict, cfg: dict, confirm_fn=None, stop_fn=None,
             result = str(rec.get("appeal_result", ""))
             if result.startswith(("申诉失败", "申诉准备失败")) and rec.get("retries", 0) < retry_cap:
                 retry_items.append(v)
+
+        # 已达重试上限仍失败的单子：不再自动重试，但要报出来让人工处理（否则彻底静默）
+        stats["stuck"] = [oid for oid, r in recs.items()
+                          if str(r.get("appeal_result", "")).startswith(("申诉失败", "申诉准备失败"))
+                          and r.get("retries", 0) >= retry_cap]
 
         stats["found"], stats["retry"] = len(new_items), len(retry_items)
         if not new_items and not retry_items:

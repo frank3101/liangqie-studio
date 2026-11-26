@@ -16,40 +16,41 @@ from playwright.sync_api import Page, TimeoutError as PWTimeout
 
 from core.config import SHOTS_DIR
 from modules.buyin.log import log
-from modules.buyin.monitor import dismiss_banner
+from modules.buyin.monitor import dismiss_banner, find_appeal_entries
 
 
 def click_appeal_button(page: Page, order_id: str):
-    """在违规列表页点行内『去申诉』，返回 (新申诉页, None) 或 (None, 错误信息)"""
+    """在违规列表页点行内『去申诉』，返回 (新申诉页, None) 或 (None, 错误信息)
+
+    入口可能是链接样式、也可能只是普通文本（页面改版后实测），所以拿候选列表逐个试。
+    """
     row = page.locator(f"tbody tr:has-text('{order_id}')").first
     if row.count() == 0:
         return None, "未找到对应违规单所在行"
-    btn = None
-    candidates = row.locator("a, button, span[class*='link'], [class*='action'] > span")
-    for i in range(candidates.count()):
-        el = candidates.nth(i)
-        if (el.inner_text() or "").strip() in ("去申诉", "申诉"):
-            btn = el
-            break
-    if btn is None:
+    entries = find_appeal_entries(row)
+    if not entries:
         return None, "该行未找到『去申诉』入口"
 
-    new_page = None
-    try:
-        with page.context.expect_page(timeout=15000) as popup_info:
-            btn.click()
-        new_page = popup_info.value
-    except PWTimeout:
-        # 兼容不新开页面、原地弹窗的情况
-        if page.locator(".semi-modal-content, [role='dialog']").count() > 0:
-            new_page = page
-        else:
-            return None, "点『去申诉』后没打开申诉页/弹窗"
-
-    new_page.wait_for_load_state("domcontentloaded", timeout=30000)
-    new_page.bring_to_front()
-    log(f"[{order_id}] 申诉页已打开：{new_page.url[:120]}")
-    return new_page, None
+    last_err = ""
+    for btn in entries[:3]:
+        try:
+            with page.context.expect_page(timeout=12000) as popup_info:
+                btn.click(timeout=5000)
+            new_page = popup_info.value
+            new_page.wait_for_load_state("domcontentloaded", timeout=30000)
+            new_page.bring_to_front()
+            log(f"[{order_id}] 申诉页已打开：{new_page.url[:120]}")
+            return new_page, None
+        except PWTimeout:
+            # 兼容不新开页面、原地弹窗的情况
+            if page.locator(".semi-modal-content, [role='dialog']").count() > 0:
+                page.bring_to_front()
+                log(f"[{order_id}] 申诉弹窗已打开（原地弹窗形态）")
+                return page, None
+            last_err = "点『去申诉』后没打开申诉页/弹窗"
+        except Exception as e:
+            last_err = f"点『去申诉』异常：{type(e).__name__}: {e}"
+    return None, last_err or "点『去申诉』没反应"
 
 
 def audit_shot(page: Page, tag: str):
@@ -88,14 +89,18 @@ def verify_appeal_registered(context, violation_page_url: str, order_id: str,
             if row.count() == 0:
                 log(f"[{order_id}] 提交后核实：该单已不在可申诉列表，提交已生效")
                 return True
-            cands = row.locator("a, button, span[class*='link'], [class*='action'] > span")
+            # 直接看整行文本里还有没有『去申诉』：页面改版后它可能只是普通文字，
+            # 用元素选择器判断会误判成「已消失」→ 假成功（A03 那条就是这么来的）
+            try:
+                row_txt = row.inner_text() or ""
+            except Exception:
+                row_txt = ""
+            still = "去申诉" in row_txt
             detail_btn = None
-            still = False
+            cands = row.locator("a, button, span[class*='link'], [class*='action'] > span")
             for i in range(cands.count()):
                 txt = (cands.nth(i).inner_text() or "").strip()
-                if txt in ("去申诉", "申诉"):
-                    still = True
-                elif "申诉详情" in txt:
+                if "申诉详情" in txt:
                     detail_btn = cands.nth(i)
             if not still:
                 log(f"[{order_id}] 提交后核实：『去申诉』已消失（单据已移到「全部」），平台已受理")
@@ -127,8 +132,10 @@ def verify_appeal_registered(context, violation_page_url: str, order_id: str,
         log(f"[{order_id}] 提交后核实：复检仍有『去申诉』，判定提交未生效", "WARN")
         return False
     except Exception as e:
-        log(f"[{order_id}] 提交后核实异常（{e}），按成功处理", "WARN")
-        return True
+        # 不能按成功处理：那条记录会让该单永久不再被处理（曾导致「假成功」静默漏申诉）。
+        # 按未确认处理更安全——下一轮回检时，若该单已不在可申诉列表，会自动判定为已生效。
+        log(f"[{order_id}] 提交后核实异常（{e}），按未确认处理，下轮回检", "WARN")
+        return False
     finally:
         if detail is not None and detail_opened:
             try:
@@ -151,7 +158,9 @@ def appeal_violation(page: Page, order_id: str, reason: str,
     try:
         new_page, err = click_appeal_button(page, order_id)
         if err:
-            if "未找到对应违规单所在行" in err or "去申诉" in err:
+            # 只有「整行都不存在」才算此前提交已生效；「找不到入口」是页面结构问题，
+            # 必须报失败（否则会记成假成功，这条单就永久静默了）
+            if "未找到对应违规单所在行" in err:
                 log(f"[{order_id}] 该单已不在可申诉列表，此前提交已生效")
                 return True, "已提交成功（核实：已不在可申诉列表）"
             return False, err

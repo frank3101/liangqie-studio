@@ -127,20 +127,50 @@ def _apply_appealable_filter(page: Page):
         log(f"点『可申诉』筛选失败（{e}），将解析全量列表", "WARN")
 
 
+APPEAL_ENTRY_TEXTS = ("去申诉", "申诉")
+
+
+def find_appeal_entries(tr) -> list:
+    """在违规行内找『去申诉』入口，返回候选元素列表（按可靠性排序）。
+
+    两种页面形态都要兼容：
+      1) 老版：操作列是链接/按钮样式（a / button / span[class*=link]）
+      2) 新版（2026-11 中旬实测）：『去申诉』退化成普通文本，类名不含 link，
+         只能按文本找 —— 否则整行会被当成「没有申诉入口」静默跳过
+         （A03 的违规单 7711073831691092264 就是这样被漏了好几天）
+    """
+    out = []
+    cands = tr.locator("a, button, span[class*='link'], [class*='action'] > span")
+    for i in range(cands.count()):
+        try:
+            if (cands.nth(i).inner_text() or "").strip() in APPEAL_ENTRY_TEXTS:
+                out.append(cands.nth(i))
+        except Exception:
+            pass
+    try:
+        if "去申诉" in (tr.inner_text() or ""):
+            loc = tr.get_by_text("去申诉")
+            for i in range(min(loc.count(), 3)):
+                el = loc.nth(i)
+                try:
+                    if el.is_visible():
+                        out.append(el)
+                except Exception:
+                    pass
+    except Exception:
+        pass
+    return out
+
+
 def _mark_appealable(page: Page, violations: list[dict]):
-    """判断每行操作列是否有『去申诉』入口（实测按钮文本为「去申诉」，兼容「申诉」）"""
-    valid_texts = ("去申诉", "申诉")
+    """判断每行操作列是否有『去申诉』入口（兼容链接样式和纯文本两种形态）"""
     for v in violations:
         v["appealable"] = False
         try:
             tr = page.locator(f"tbody tr:has-text('{v['order_id']}')").first
             if tr.count() == 0:
                 continue
-            candidates = tr.locator("a, button, span[class*='link'], [class*='action'] > span")
-            for i in range(candidates.count()):
-                txt = (candidates.nth(i).inner_text() or "").strip()
-                if txt in valid_texts:
-                    v["appealable"] = True
-                    break
+            if find_appeal_entries(tr):
+                v["appealable"] = True
         except Exception as e:
             log(f"判断可申诉状态失败（{v['order_id']}）：{e}", "WARN")

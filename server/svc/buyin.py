@@ -36,6 +36,8 @@ class BuyinService:
         self._today_cache = {}            # name -> (ts, count)
         self._last_busy_log = 0.0
         self._last_alert = ""             # 上次已推送的异常内容（一样就不再重复推）
+        self._stuck_sig = ""              # 上次推送的「卡住单子」内容
+        self._stuck_day = ""              # 上次推送卡住提醒的日期（跨天重报一次）
         buyin_log.set_logger(HUB.cb(CH))
         # 读回上次检查结果：重启后账号表还能看到「登录正常 · 11:20」而不是全变「未检查」
         # （新违规条数/异常标记不带回，那些是那一轮的瞬时状态）
@@ -345,30 +347,47 @@ class BuyinService:
                      "OK" if not s.get("fail") and not s.get("error") else "WARN")
             if len(s.get("fail") or []) >= max_retry:
                 self.log(f"{name}：有违规单已重试 {max_retry} 次仍失败，请人工看一下", "WARN")
+            stuck = [str(x) for x in (s.get("stuck") or [])]
+            if stuck:
+                self.log(f"{name}：{len(stuck)} 条已达重试上限仍失败（不会再自动重试，需人工处理）："
+                         f"{'、'.join(stuck[:3])}", "WARN")
+            if s.get("reopened"):
+                self.log(f"{name}：{s['reopened']} 条记录显示已提交但仍在可申诉列表，已重新提交", "WARN")
 
         if not self.cfg.get("企微通知"):
             return
-        # 只在「检查异常 / 申诉失败 / 缺材料」时推企微：申诉成功不播报，
+        # 只在「检查异常 / 申诉失败 / 缺材料 / 卡住的单子」时推企微：申诉成功不播报，
         # 免得每 10 分钟一条「正常」消息把真正需要处理的盖过去。
-        alerts = []          # (账号, 异常说明, 失败单号列表, 缺材料单号列表)
+        alerts = []          # (账号, 异常说明, 失败单号, 缺材料单号, 卡住单号)
         for r in rows:
             s = r["summary"] or {}
             fails = [str(x) for x in (s.get("fail") or [])]
             miss = [str(x) for x in (s.get("miss") or [])]
-            if s.get("error") or fails or miss:
-                alerts.append((r["name"], str(s.get("error") or ""), fails, miss))
+            stuck = [str(x) for x in (s.get("stuck") or [])]
+            if s.get("error") or fails or miss or stuck:
+                alerts.append((r["name"], str(s.get("error") or ""), fails, miss, stuck))
         if not alerts:
             self._last_alert = ""         # 恢复正常了，下次再出问题照常推
             return
         sig = repr(alerts)
+        # 同一批问题默认不再重复推（免得每 10 分钟一条）；但「卡住的单子」每天重报一次——
+        # 一直没解决=用户需要持续被提醒，否则就彻底静默了。
+        stuck_sig = repr([(a[0], a[4]) for a in alerts if a[4]])
+        today = time.strftime("%Y-%m-%d")
+        stuck_still_stuck = stuck_sig and stuck_sig == getattr(self, "_stuck_sig", "")
+        stuck_new_day = today != getattr(self, "_stuck_day", "")
         if sig == self._last_alert:
-            self.log("异常与上一轮相同，不再重复推送企微")
-            return
+            if not (stuck_sig and stuck_still_stuck and stuck_new_day):
+                self.log("异常与上一轮相同，不再重复推送企微")
+                return
+            self.log("同一批异常仍未解决，跨天再提醒一次", "WARN")
         self._last_alert = sig
+        self._stuck_sig = stuck_sig
+        self._stuck_day = today
 
         ok_total = sum(len((r["summary"] or {}).get("ok") or []) for r in rows)
         lines = [f"【电商违规申诉·{tag}异常提醒】"]
-        for name, error, fails, miss in alerts:
+        for name, error, fails, miss, stuck in alerts:
             if error:
                 lines.append(f"· {name}：❌ {error}")
             if fails:
@@ -379,10 +398,14 @@ class BuyinService:
                 shown = "、".join(miss[:3])
                 more = f" 等 {len(miss)} 条" if len(miss) > 3 else ""
                 lines.append(f"· {name}：缺申诉材料没提交 {len(miss)} 条 —— {shown}{more}")
+            if stuck:
+                shown = "、".join(stuck[:3])
+                more = f" 等 {len(stuck)} 条" if len(stuck) > 3 else ""
+                lines.append(f"· {name}：{len(stuck)} 条自动申诉多次失败已停手，需人工处理 —— {shown}{more}")
         if ok_total:
             lines.append(f"（另有 {ok_total} 条正常提交，不单独播报）")
-        lines.append("详情看「电商违规申诉 → 运行日志 / 申诉记录」；同一问题只播报一次，"
-                     "再出现新的失败会重新提醒。")
+        lines.append("详情看「电商违规申诉 → 运行日志 / 申诉记录」；同一批问题当天只提醒一次，"
+                     "仍未解决的卡住单子每天会再提醒一次。")
         try:
             from server.svc import wecom as wc
             wc.push("\n".join(lines))
