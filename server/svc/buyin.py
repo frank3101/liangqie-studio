@@ -387,9 +387,10 @@ class BuyinService:
             self._last_alert = ""         # 恢复正常了，下次再出问题照常推
             return
         sig = repr(alerts)
-        # 同一批问题默认不再重复推（免得每 10 分钟一条）；但「卡住的单子」每天重报一次——
-        # 一直没解决=用户需要持续被提醒，否则就彻底静默了。
-        stuck_sig = repr([(a[0], a[4], a[5], a[6]) for a in alerts if a[4] or a[5] or a[6]])
+        # 同一批问题默认不再重复推（免得每 10 分钟一条）；「多次失败停手 / 类型未配置」
+        # 这类还没解决的单子每天重报一次。平台驳回不参与重报——被驳回的单无法再次
+        # 申诉，重报没有意义，发现时提醒一次即可。
+        stuck_sig = repr([(a[0], a[4], a[5]) for a in alerts if a[4] or a[5]])
         today = time.strftime("%Y-%m-%d")
         stuck_still_stuck = stuck_sig and stuck_sig == getattr(self, "_stuck_sig", "")
         stuck_new_day = today != getattr(self, "_stuck_day", "")
@@ -429,8 +430,8 @@ class BuyinService:
                 lines.append(f"· {name}：{len(stuck)} 条自动申诉多次失败已停手，需人工处理 —— {shown}{more}")
         if ok_total:
             lines.append(f"（另有 {ok_total} 条正常提交，不单独播报）")
-        lines.append("详情看「电商违规申诉 → 运行日志 / 申诉记录」；同一批问题当天只提醒一次，"
-                     "仍未解决的卡住单子每天会再提醒一次。")
+        lines.append("详情看「电商违规申诉 → 运行日志 / 申诉记录」；平台驳回只提醒一次，"
+                     "仍未解决的卡住/未配置单子每天会再提醒一次。")
         try:
             from server.svc import wecom as wc
             wc.push("\n".join(lines))
