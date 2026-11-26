@@ -47,6 +47,69 @@ def wait_ready(page: Page, timeout_ms: int = 25000) -> str:
     return "unknown"
 
 
+# 只匹配「正在旋转」的指示器和骨架屏。注意不能用宽泛的 [class*='spin']：
+# auxo/semi 的 spin 容器（nested-loading / container）加载完也常驻可见，
+# 会让稳定判定永远不通过（2026-11-26 实测踩坑）
+LOADING_SEL = ".semi-spin-spinning, [class*='spin-spinning'], [class*='skeleton']"
+
+
+def _table_snapshot(page: Page):
+    """把当前违规表格内容序列化成文本（无表格返回 None）。
+
+    空态（「暂无数据」）返回带 EMPTY 标记的文本，骨架屏/加载中的空行
+    序列化出来是空白，调用方据此继续等待。
+    """
+    try:
+        if page.locator("table").count() == 0:
+            return None
+        rows = []
+        for tr in page.locator("tbody tr").all():
+            try:
+                cells = [c.strip() for c in tr.locator("td").all_inner_texts()]
+            except Exception:
+                cells = []
+            rows.append("|".join(cells))
+        empty = "EMPTY" if page.get_by_text("暂无数据").count() > 0 else ""
+        return "\n".join(rows) + empty
+    except Exception:
+        return None
+
+
+def wait_table_settled(page: Page, timeout_ms: int = 15000) -> bool:
+    """等违规表格「加载完成且稳定」，返回 True=可信 / False=超时未稳定。
+
+    可信的判定（三条同时满足）：
+      1. 页面上没有可见的加载指示器（spin / skeleton / loading）
+      2. 表格已渲染出非空内容，或出现明确的「暂无数据」空态
+      3. 间隔两次读取内容完全一致（防止恰好读到两帧不同的中间态）
+
+    这是防「转圈误判」的关键：页面加载中可能出现瞬时的空 tbody 甚至
+    「暂无数据」，只读一次就会把还在加载的列表当成真的没有违规。
+    """
+    waited = 0
+    last = None
+    while waited < timeout_ms:
+        try:
+            snap = _table_snapshot(page)
+            if snap is not None and snap.strip():
+                loading = False
+                for el in page.locator(LOADING_SEL).all():
+                    try:
+                        if el.is_visible():
+                            loading = True
+                            break
+                    except Exception:
+                        pass
+                if not loading and snap == last:
+                    return True
+                last = snap
+        except Exception:
+            pass
+        page.wait_for_timeout(700)
+        waited += 700
+    return False
+
+
 def fetch_violations(page: Page, page_url: str) -> list[dict]:
     log(f"打开百应违规处置页：{page_url}")
     page.goto(page_url, wait_until="domcontentloaded", timeout=60000)
@@ -59,7 +122,11 @@ def fetch_violations(page: Page, page_url: str) -> list[dict]:
 
     dismiss_banner(page)
     _apply_appealable_filter(page)
-    page.wait_for_timeout(2000)          # 等筛选后的列表刷新
+
+    # 等筛选后的列表真正加载稳定，再读内容 —— 不能死等固定秒数，
+    # 接口慢的时候固定 2 秒读到的可能是旧列表或瞬时空态
+    if not wait_table_settled(page, 20000):
+        raise RuntimeError("点击『可申诉』后列表 20 秒未稳定（可能在加载中或页面改版），本轮不下结论")
 
     if page.get_by_text("暂无数据").count() > 0:
         log("『可申诉』筛选下暂无待申诉项")

@@ -16,7 +16,7 @@ from playwright.sync_api import Page, TimeoutError as PWTimeout
 
 from core.config import SHOTS_DIR
 from modules.buyin.log import log
-from modules.buyin.monitor import dismiss_banner, find_appeal_entries
+from modules.buyin.monitor import dismiss_banner, wait_table_settled, find_appeal_entries
 
 
 def click_appeal_button(page: Page, order_id: str):
@@ -82,7 +82,9 @@ def verify_appeal_registered(context, violation_page_url: str, order_id: str,
         pg.goto(violation_page_url, wait_until="domcontentloaded", timeout=60000)
         pg.wait_for_selector("table", timeout=30000)
         dismiss_banner(pg)
-        pg.wait_for_timeout(2500)
+        # 等列表真正加载稳定再读 —— 加载中读到空列表会误判成「已不在列表」
+        if not wait_table_settled(pg, 20000):
+            raise RuntimeError("核实页 20 秒未稳定，本轮不下结论")
 
         for attempt in (1, 2):
             row = pg.locator(f"tbody tr:has-text('{order_id}')").first
@@ -128,7 +130,8 @@ def verify_appeal_registered(context, violation_page_url: str, order_id: str,
                 pg.reload(wait_until="domcontentloaded")
                 pg.wait_for_selector("table", timeout=30000)
                 dismiss_banner(pg)
-                pg.wait_for_timeout(2500)
+                if not wait_table_settled(pg, 20000):
+                    raise RuntimeError("复检页 20 秒未稳定，本轮不下结论")
         log(f"[{order_id}] 提交后核实：复检仍有『去申诉』，判定提交未生效", "WARN")
         return False
     except Exception as e:
