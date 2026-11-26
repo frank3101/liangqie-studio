@@ -110,28 +110,8 @@ def wait_table_settled(page: Page, timeout_ms: int = 15000) -> bool:
     return False
 
 
-def fetch_violations(page: Page, page_url: str) -> list[dict]:
-    log(f"打开百应违规处置页：{page_url}")
-    page.goto(page_url, wait_until="domcontentloaded", timeout=60000)
-
-    try:
-        page.wait_for_selector("table", timeout=30000)
-    except PWTimeout:
-        log("30 秒内没加载出违规表格（可能未登录或页面改版）", "WARN")
-        raise
-
-    dismiss_banner(page)
-    _apply_appealable_filter(page)
-
-    # 等筛选后的列表真正加载稳定，再读内容 —— 不能死等固定秒数，
-    # 接口慢的时候固定 2 秒读到的可能是旧列表或瞬时空态
-    if not wait_table_settled(page, 20000):
-        raise RuntimeError("点击『可申诉』后列表 20 秒未稳定（可能在加载中或页面改版），本轮不下结论")
-
-    if page.get_by_text("暂无数据").count() > 0:
-        log("『可申诉』筛选下暂无待申诉项")
-        return []
-
+def _parse_rows(page: Page) -> list[dict]:
+    """把当前表格解析成 [{order_id, violation_status, reason, appeal_status, row_text}]"""
     headers = [h.strip() for h in page.locator("thead th").all_inner_texts()]
     log(f"表格列：{headers}")
 
@@ -162,6 +142,90 @@ def fetch_violations(page: Page, page_url: str) -> list[dict]:
             "reason": r.get("违规原因", ""),
             "appeal_status": r.get("申诉状态", ""),
         })
+    return violations
+
+
+def _search_order(page: Page, oid: str) -> dict | None:
+    """在违规列表页用搜索框按单号查一条，返回该行信息（查不到返回 None）"""
+    try:
+        inp = page.locator("input[placeholder='请输入']").first
+        if inp.count() == 0:
+            return None
+        inp.fill("")
+        inp.fill(oid)
+        btn = page.locator("button:has-text('查询')").first
+        if btn.count() == 0:
+            return None
+        btn.click()
+        if not wait_table_settled(page, 15000):
+            return None
+        for v in _parse_rows(page):
+            if v["order_id"] == oid:
+                return v
+    except Exception as e:
+        log(f"回检搜索 {oid} 失败：{e}", "WARN")
+    return None
+
+
+def fetch_audit_statuses(page: Page, page_url: str, order_ids: set[str]) -> dict[str, dict]:
+    """查指定单号在平台上的最终状态（申诉成功 / 申诉失败）。
+
+    用途：申诉提交后再回头确认平台审核结果 —— 只看「可申诉」列表是看不到
+    被驳回的单的（驳回后行里没有「去申诉」），会造成「假成功」永久静默
+    （2026-11-25 A03 材质虚假单就是这样：记录说成功，9 分钟后被驳回）。
+    先看首屏，再按单号搜索补齐（历史单不在第一页）。
+    """
+    out: dict[str, dict] = {}
+    if not order_ids:
+        return out
+    log(f"回检平台审核结果（{len(order_ids)} 条）：{page_url}")
+    page.goto(page_url, wait_until="domcontentloaded", timeout=60000)
+    try:
+        page.wait_for_selector("table", timeout=30000)
+    except PWTimeout:
+        log("回检：30 秒内没加载出表格，本轮跳过", "WARN")
+        return out
+    dismiss_banner(page)
+    if not wait_table_settled(page, 20000):
+        log("回检：列表未稳定，本轮不下结论", "WARN")
+        return out
+
+    for v in _parse_rows(page):
+        if v["order_id"] in order_ids:
+            out[v["order_id"]] = v
+
+    missing = [o for o in order_ids if o not in out]
+    for oid in missing:
+        v = _search_order(page, oid)
+        if v:
+            out[oid] = v
+    log(f"回检：命中 {len(out)}/{len(order_ids)} 条")
+    return out
+
+
+def fetch_violations(page: Page, page_url: str) -> list[dict]:
+    log(f"打开百应违规处置页：{page_url}")
+    page.goto(page_url, wait_until="domcontentloaded", timeout=60000)
+
+    try:
+        page.wait_for_selector("table", timeout=30000)
+    except PWTimeout:
+        log("30 秒内没加载出违规表格（可能未登录或页面改版）", "WARN")
+        raise
+
+    dismiss_banner(page)
+    _apply_appealable_filter(page)
+
+    # 等筛选后的列表真正加载稳定，再读内容 —— 不能死等固定秒数，
+    # 接口慢的时候固定 2 秒读到的可能是旧列表或瞬时空态
+    if not wait_table_settled(page, 20000):
+        raise RuntimeError("点击『可申诉』后列表 20 秒未稳定（可能在加载中或页面改版），本轮不下结论")
+
+    if page.get_by_text("暂无数据").count() > 0:
+        log("『可申诉』筛选下暂无待申诉项")
+        return []
+
+    violations = _parse_rows(page)
 
     _mark_appealable(page, violations)
     # 只保留真正出现「去申诉」按钮的行（防止筛选 chip 失效后误判）

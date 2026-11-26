@@ -73,7 +73,8 @@ class BuyinService:
             name = a.get("name") or ""
             ac = store.acct_cfg(a)
             st = self.status.get(name, {})
-            b1, b2 = store.mat_counts(name)
+            mc = store.mat_counts(name)
+            b1, b2, b3 = mc.get("box1", 0), mc.get("box2", 0), mc.get("box3", 0)
             login_ok = st.get("login_ok")
             state, state_cls = "未检查", "idle"
             if st.get("last_error"):
@@ -98,7 +99,8 @@ class BuyinService:
                 "last_result": st.get("last_result") or "",
                 "found": st.get("found", 0),
                 "today": self._today(name),
-                "mat1": b1, "mat2": b2,
+                "mat1": b1, "mat2": b2, "mat3": b3,
+                "mat_ok": (b1 + b2 + b3) > 0,
             })
         return rows
 
@@ -109,7 +111,7 @@ class BuyinService:
             out[r["name"]] = {
                 "enabled": r["enabled"], "login_state": r["login_state"],
                 "state_cls": r["state_cls"], "today": r["today"],
-                "found": r["found"], "mat_ok": (r["mat1"] + r["mat2"]) > 0,
+                "found": r["found"], "mat_ok": r.get("mat_ok", True),
                 "last_result": r["last_result"],
             }
         return out
@@ -145,7 +147,19 @@ class BuyinService:
                 cfg["失败重试上限"] = max(1, int(payload["失败重试上限"]))
             except Exception:
                 raise ValueError("失败重试次数要填数字")
-        if "定时检查时间" in payload or cfg.get("每日定时检查"):
+        if "分类申诉" in payload and isinstance(payload["分类申诉"], dict):
+            rules = {}
+            for k, v in payload["分类申诉"].items():
+                k = str(k or "").strip()
+                if not k or not isinstance(v, dict):
+                    continue
+                b1 = str(v.get("第1框") or "").strip()
+                b2 = str(v.get("第2框") or "").strip()
+                for b in (b1, b2):
+                    if b and b not in store.APPEAL_BOXES:
+                        raise ValueError(f"类型「{k}」的材料分组只能是 " + "/".join(store.APPEAL_BOXES))
+                rules[k] = {"理由": str(v.get("理由") or "").strip(), "第1框": b1, "第2框": b2}
+            cfg["分类申诉"] = rules
             raw = str(payload.get("定时检查时间", cfg.get("定时检查时间")) or "").strip()
             if raw:
                 try:
@@ -358,21 +372,24 @@ class BuyinService:
             return
         # 只在「检查异常 / 申诉失败 / 缺材料 / 卡住的单子」时推企微：申诉成功不播报，
         # 免得每 10 分钟一条「正常」消息把真正需要处理的盖过去。
-        alerts = []          # (账号, 异常说明, 失败单号, 缺材料单号, 卡住单号)
+        alerts = []          # (账号, 异常, 失败单, 缺材料单, 卡住单, 类型未配置, 平台驳回)
         for r in rows:
             s = r["summary"] or {}
             fails = [str(x) for x in (s.get("fail") or [])]
             miss = [str(x) for x in (s.get("miss") or [])]
             stuck = [str(x) for x in (s.get("stuck") or [])]
-            if s.get("error") or fails or miss or stuck:
-                alerts.append((r["name"], str(s.get("error") or ""), fails, miss, stuck))
+            unknown = [str(x) for x in (s.get("unknown") or [])]
+            rejected = [str(x) for x in (s.get("rejected") or [])]
+            if s.get("error") or fails or miss or stuck or unknown or rejected:
+                alerts.append((r["name"], str(s.get("error") or ""), fails, miss,
+                               stuck, unknown, rejected))
         if not alerts:
             self._last_alert = ""         # 恢复正常了，下次再出问题照常推
             return
         sig = repr(alerts)
         # 同一批问题默认不再重复推（免得每 10 分钟一条）；但「卡住的单子」每天重报一次——
         # 一直没解决=用户需要持续被提醒，否则就彻底静默了。
-        stuck_sig = repr([(a[0], a[4]) for a in alerts if a[4]])
+        stuck_sig = repr([(a[0], a[4], a[5], a[6]) for a in alerts if a[4] or a[5] or a[6]])
         today = time.strftime("%Y-%m-%d")
         stuck_still_stuck = stuck_sig and stuck_sig == getattr(self, "_stuck_sig", "")
         stuck_new_day = today != getattr(self, "_stuck_day", "")
@@ -387,7 +404,7 @@ class BuyinService:
 
         ok_total = sum(len((r["summary"] or {}).get("ok") or []) for r in rows)
         lines = [f"【电商违规申诉·{tag}异常提醒】"]
-        for name, error, fails, miss, stuck in alerts:
+        for name, error, fails, miss, stuck, unknown, rejected in alerts:
             if error:
                 lines.append(f"· {name}：❌ {error}")
             if fails:
@@ -398,6 +415,14 @@ class BuyinService:
                 shown = "、".join(miss[:3])
                 more = f" 等 {len(miss)} 条" if len(miss) > 3 else ""
                 lines.append(f"· {name}：缺申诉材料没提交 {len(miss)} 条 —— {shown}{more}")
+            if rejected:
+                shown = "、".join(rejected[:3])
+                more = f" 等 {len(rejected)} 条" if len(rejected) > 3 else ""
+                lines.append(f"· {name}：平台驳回 {len(rejected)} 条（申诉没通过）—— {shown}{more}")
+            if unknown:
+                shown = "、".join(unknown[:3])
+                more = f" 等 {len(unknown)} 条" if len(unknown) > 3 else ""
+                lines.append(f"· {name}：{len(unknown)} 条违规类型未配置申诉方案，未自动提交，需人工处理 —— {shown}{more}")
             if stuck:
                 shown = "、".join(stuck[:3])
                 more = f" 等 {len(stuck)} 条" if len(stuck) > 3 else ""
@@ -433,13 +458,16 @@ class BuyinService:
 
     def materials(self, name):
         self._acc(name)
-        return {"name": name, "box1": store.list_group(name, "box1"),
-                "box2": store.list_group(name, "box2")}
+        out = {"name": name}
+        for g in store.APPEAL_BOXES:
+            out[g] = store.list_group(name, g)
+        out["labels"] = store.BOX_LABELS
+        return out
 
     def material_path(self, name, group, filename):
         self._acc(name)
-        if group not in ("box1", "box2"):
-            raise ValueError("分组只能是 box1 或 box2")
+        if group not in store.APPEAL_BOXES:
+            raise ValueError("材料分组只能是 " + "/".join(store.APPEAL_BOXES))
         d = store.group_dir(name, group).resolve()
         target = (d / Path(filename).name).resolve()
         if d not in target.parents or not target.exists():
@@ -449,8 +477,8 @@ class BuyinService:
     def add_materials(self, name, group, files):
         """files: [(filename, fileobj)]；返回保存的文件名列表"""
         self._acc(name)
-        if group not in ("box1", "box2"):
-            raise ValueError("分组只能是 box1 或 box2")
+        if group not in store.APPEAL_BOXES:
+            raise ValueError("材料分组只能是 " + "/".join(store.APPEAL_BOXES))
         d = store.group_dir(name, group)
         d.mkdir(parents=True, exist_ok=True)
         saved = []

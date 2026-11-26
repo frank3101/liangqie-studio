@@ -137,6 +137,52 @@ def ensure_violation_page(context, page, name: str) -> str:
     return state
 
 
+def _audit_outcomes(page, name: str, recs: dict, stats: dict) -> None:
+    """平台结果回检：提交成功的单子在 10 分钟 / 2 小时后各看一次平台最终审核结果。
+
+    只看「可申诉」列表是看不到被驳回的单的（驳回后行里没有「去申诉」），
+    会把「假成功」永久留在记录里 —— 2026-11-25 A03 材质虚假单就是这样：
+    15:43 记成提交成功，15:52 被平台驳回，系统一直当它成功，既不提醒也不处理。
+    """
+    stats.setdefault("rejected", [])
+    try:
+        now_ts = time.time()
+        pend = []
+        for oid, r in recs.items():
+            if not str(r.get("appeal_result", "")).startswith("申诉提交成功"):
+                continue
+            try:
+                t0 = datetime.fromisoformat(str(r.get("appeal_ok_at") or "")).timestamp()
+            except Exception:
+                continue
+            stage = int(r.get("audit_stage") or 0)
+            gates = (600, 7200)              # 提交后 10 分钟、2 小时
+            if stage >= len(gates) or now_ts - t0 < gates[stage]:
+                continue
+            pend.append((oid, stage))
+        if not pend:
+            return
+        infos = monitor.fetch_audit_statuses(page, VIOLATION_URL, {o for o, _ in pend})
+        for oid, stage in pend:
+            rec = recs[oid]
+            rec["audit_stage"] = stage + 1
+            info = infos.get(oid)
+            if not info:
+                continue                     # 没查到 → 不下结论，下个阶段再看
+            ap = str(info.get("appeal_status") or "")
+            if "失败" in ap:
+                rec["appeal_result"] = f"平台驳回：{info.get('reason') or '见违规详情'}"
+                rec["rejected_at"] = datetime.now().isoformat(timespec="seconds")
+                stats["rejected"].append(f"{oid}（{info.get('reason') or ''}）")
+                log(f"[{name}][{oid}] 平台最终结果：申诉失败 —— {info.get('reason') or ''}", "ERROR")
+            elif "成功" in ap:
+                rec["appeal_result"] = "申诉成功（平台已通过）"
+                log(f"[{name}][{oid}] 平台最终结果：申诉成功", "OK")
+        store.save_records(name, recs)
+    except Exception as e:
+        log(f"[{name}] 平台结果回检失败（{e}），不影响申诉本身", "WARN")
+
+
 # ---------------------------------------------------------------- 一轮检查
 def run_account(account: dict, cfg: dict, confirm_fn=None, stop_fn=None,
                 chrome_path: str = "") -> dict:
@@ -151,7 +197,7 @@ def run_account(account: dict, cfg: dict, confirm_fn=None, stop_fn=None,
     launched = False
     port = int(account.get("port") or 0)
     stats = {"found": 0, "retry": 0, "ok": [], "fail": [], "skipped": 0, "miss": [],
-             "reopened": 0, "stuck": []}
+             "reopened": 0, "stuck": [], "unknown": []}
     reason = store.reason_for(cfg, account)
     # 占号期间持租约：发布模块同时在跑也不许把这个浏览器关掉（两边各开一个标签页）
     if port:
@@ -219,7 +265,8 @@ def run_account(account: dict, cfg: dict, confirm_fn=None, stop_fn=None,
         stats["found"], stats["retry"] = len(new_items), len(retry_items)
         if not new_items and not retry_items:
             log(f"[{name}] 没有新的可申诉违规")
-            store.save_records(name, recs)
+            # 没有新违规时也要回检：之前提交的单子可能已被平台驳回
+            _audit_outcomes(page, name, recs, stats)
             return {**stats, "error": None}
 
         log(f"[{name}] 可申诉 {len(violations)} 条（新 {len(new_items)}，重试 {len(retry_items)}），"
@@ -248,25 +295,37 @@ def run_account(account: dict, cfg: dict, confirm_fn=None, stop_fn=None,
             if not cfg.get("自动申诉"):
                 rec["appeal_result"] = "自动申诉已关闭，未提交"
             else:
-                mats = store.materials(name)
-                if not mats:
-                    rec["appeal_result"] = "缺申诉材料（「申诉材料」里给这个号传 box1/box2）"
-                elif confirm_fn is not None and not confirm_fn(
-                        f"百应申诉【{name}】\n违规单：{oid}\n原因：{v.get('reason', '')}\n\n确定提交吗？"):
-                    rec["appeal_result"] = "人工取消提交"
+                vtype = str(v.get("reason", "") or "").strip()
+                rule = store.type_rule(cfg, vtype)
+                if rule is None:
+                    # 没有对应类型的申诉方案：绝不拿通用理由硬提交 ——
+                    # 申诉机会只有一次，材料对不上会被驳回（材质虚假用授权书就是这样失败的）
+                    rec["appeal_result"] = f"类型未配置：{vtype or '未知'} 没有申诉方案，未自动提交"
+                    stats["unknown"].append(f"{oid}（{vtype or '未知类型'}）")
                 else:
-                    ok, msg = appealer.appeal_violation(page, oid, reason, mats)
-                    if ok:
-                        rec["appeal_result"] = "申诉提交成功"
-                        rec["appeal_ok_at"] = datetime.now().isoformat(timespec="seconds")
+                    mats = store.groups_for_rule(name, rule)
+                    if not mats:
+                        box = "/".join(x for x in (str(rule.get("第1框") or ""),
+                                                   str(rule.get("第2框") or "")) if x)
+                        rec["appeal_result"] = f"缺申诉材料（类型「{vtype}」需要用 {box or 'box1/box2'}）"
+                    elif confirm_fn is not None and not confirm_fn(
+                            f"百应申诉【{name}】\n违规单：{oid}\n类型：{vtype}\n\n确定提交吗？"):
+                        rec["appeal_result"] = "人工取消提交"
                     else:
-                        rec["appeal_result"] = f"申诉失败：{msg}"
+                        use_reason = str(rule.get("理由") or "").strip() or reason
+                        ok, msg = appealer.appeal_violation(page, oid, use_reason, mats)
+                        if ok:
+                            rec["appeal_result"] = "申诉提交成功"
+                            rec["appeal_ok_at"] = datetime.now().isoformat(timespec="seconds")
+                        else:
+                            rec["appeal_result"] = f"申诉失败：{msg}"
 
             result = str(rec.get("appeal_result", ""))
             if result.startswith("申诉提交成功"):
                 stats["ok"].append(oid)
                 log(f"[{name}][{oid}] ✔ {result}", "OK")
-            elif result.startswith(("自动申诉已关闭", "缺申诉材料", "人工取消提交", "当前状态不可申诉")):
+            elif result.startswith(("自动申诉已关闭", "缺申诉材料", "人工取消提交",
+                                    "当前状态不可申诉", "类型未配置")):
                 stats["skipped"] += 1
                 if result.startswith("缺申诉材料"):
                     stats["miss"].append(oid)     # 缺材料等于没提交，要推企微提醒
@@ -283,6 +342,9 @@ def run_account(account: dict, cfg: dict, confirm_fn=None, stop_fn=None,
 
             store.save_records(name, recs)     # 每处理一条就落盘，进程挂了也不丢
             time.sleep(random.uniform(3, 8))
+
+        # 平台结果回检（提交后 10 分钟 / 2 小时各一次，防止「假成功」静默）
+        _audit_outcomes(page, name, recs, stats)
 
         store.save_records(name, recs)
         return {**stats, "error": None}

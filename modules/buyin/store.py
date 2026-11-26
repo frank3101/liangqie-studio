@@ -24,10 +24,30 @@ MAT_ROOT = ROOT / "materials"
 
 IMG_EXT = (".jpg", ".jpeg", ".png", ".webp", ".bmp", ".gif", ".pdf")
 
+# 允许的材料分组：box1/box2 是老的两套（名人授权类），box3/box4 备用
+# （材质虚假等类型用 box3，避免和授权材料混在一起提交）
+APPEAL_BOXES = ("box1", "box2", "box3", "box4")
+BOX_LABELS = {
+    "box1": "授权证明",
+    "box2": "申诉材料",
+    "box3": "材质类材料",
+    "box4": "备用材料",
+}
+
 DEFAULT_REASON = (
     "尊敬的审核员，我这个抖音号是经过贾乃亮本人授权的，是在贾乃亮肖像保护授权号内的。"
     "附上贾乃亮的肖像权保护中截图以及贾乃亮授权书，我有材料证明。"
     "并积极配合审核工作，请重新审核，谢谢。"
+)
+
+# 材质类违规（材质虚假 / 虚假宣传：材质）用的理由模板。
+# 这类违规和名人授权无关，拿授权书去答必然驳回
+#（2026-11-25 A03 单 7712010235782742287 就是这么失败的）
+DEFAULT_MATERIAL_REASON = (
+    "尊敬的审核员，本商品在视频口播中提到的材质与商品详情页描述一致，"
+    "附上商品详情页截图及质检/进货凭证，可证明商品实物材质与详情信息相符，"
+    "不存在虚假宣传的主观故意；口播中表述不够严谨之处已整改。"
+    "请重新审核，谢谢。"
 )
 
 DEFAULTS = {
@@ -41,7 +61,15 @@ DEFAULTS = {
     "上次定时日期": "",
     "失败重试上限": 5,
     "企微通知": True,
+    # 按违规类型配置申诉：每种类型的申诉理由 + 用哪套材料填申诉页第 1/2 个上传框
+    # 没列出的类型 = 不自动申诉（只提醒人工），避免拿错材料浪费唯一一次申诉机会
+    "分类申诉": {
+        "仿冒名人宣传": {"理由": "", "第1框": "box1", "第2框": "box2"},
+        "材质虚假": {"理由": DEFAULT_MATERIAL_REASON, "第1框": "box3", "第2框": ""},
+    },
 }
+
+TYPE_RULE_DEFAULT = {"理由": "", "第1框": "box1", "第2框": "box2"}
 
 ACCT_DEFAULTS = {
     "enabled": True,            # 这个号是否参与百应申诉
@@ -184,16 +212,67 @@ def list_group(name: str, group: str) -> list[dict]:
 
 
 def materials(name: str) -> dict:
-    """返回 {"box1": [...], "box2": [...]}；都没有则返回 {}（= 缺材料）"""
-    box1 = [str(group_dir(name, "box1") / f["name"]) for f in list_group(name, "box1")]
-    box2 = [str(group_dir(name, "box2") / f["name"]) for f in list_group(name, "box2")]
-    if box1 or box2:
-        return {"box1": box1, "box2": box2}
-    return {}
+    """返回 {分组: [文件绝对路径...]}，只含非空分组；全空返回 {}（= 缺材料）"""
+    out = {}
+    for group in APPEAL_BOXES:
+        files = [str(group_dir(name, group) / f["name"]) for f in list_group(name, group)]
+        if files:
+            out[group] = files
+    return out
 
 
-def mat_counts(name: str) -> tuple[int, int]:
-    return len(list_group(name, "box1")), len(list_group(name, "box2"))
+def mat_counts(name: str) -> dict:
+    return {g: len(list_group(name, g)) for g in APPEAL_BOXES}
+
+
+def _norm_type(vtype: str) -> str:
+    return re.sub(r"\s+", "", str(vtype or ""))
+
+
+def _type_aliases(key: str) -> list[str]:
+    """类型键支持别名：用 / 、 , ； 分隔，例如「仿冒名人宣传/未取得名人授权」"""
+    return [x for x in (_norm_type(p) for p in re.split(r"[/、,，;；]", str(key or ""))) if x]
+
+
+def type_rule(cfg: dict, vtype: str) -> dict | None:
+    """按违规类型找申诉规则；找不到返回 None（= 不自动申诉）。
+
+    匹配顺序：完全一致 → 类型互相包含（防表格里类型后面带了别的字）。
+    """
+    rules = cfg.get("分类申诉") or {}
+    t = _norm_type(vtype)
+    if not t:
+        return None
+    pairs = []
+    for k, v in rules.items():
+        if not isinstance(v, dict):
+            continue
+        for alias in _type_aliases(k):
+            pairs.append((alias, v))
+    for alias, v in pairs:
+        if alias == t:
+            return v
+    for alias, v in pairs:
+        if alias in t or t in alias:
+            return v
+    return None
+
+
+def groups_for_rule(name: str, rule: dict) -> dict:
+    """按规则把材料组装成 {box1: [...], box2: [...]}（对应申诉页第 1/2 个上传框）。
+
+    规则里的「第1框」「第2框」填的是材料分组名（box1~box4），留空 = 不填这个框。
+    两框都没有可用材料时返回 {}。
+    """
+    out = {}
+    for slot, key in (("box1", "第1框"), ("box2", "第2框")):
+        group = str(rule.get(key) or "").strip()
+        if not group:
+            continue
+        files = [str(group_dir(name, group) / f["name"]) for f in list_group(name, group)]
+        if files:
+            out[slot] = files
+    return out
 
 
 # ---------------------------------------------------------------- 旧模块登录态

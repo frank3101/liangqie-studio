@@ -1029,6 +1029,7 @@ function renderBymMats() {
   };
   put("box1", "bym-box1", "bym-c1");
   put("box2", "bym-box2", "bym-c2");
+  put("box3", "bym-box3", "bym-c3");
 }
 
 async function bymUpload(group, input) {
@@ -1081,6 +1082,67 @@ function renderBysSettings() {
   if (idle("byn-confirm")) document.getElementById("byn-confirm").checked = !!c["提交前人工确认"];
   if (idle("byn-push")) document.getElementById("byn-push").checked = !!c["企微通知"];
   if (idle("byn-reason")) document.getElementById("byn-reason").value = c["统一申诉理由"] || "";
+  renderBynTypes(c["分类申诉"] || {});
+}
+
+/* ---- 按违规类型申诉 ---- */
+const BYN_BOX_OPTS = [
+  ["", "（不填）"], ["box1", "box1 授权证明"], ["box2", "box2 申诉材料"],
+  ["box3", "box3 材质类"], ["box4", "box4 备用"],
+];
+
+function bynTypeRow(t, rule) {
+  const tr = document.createElement("tr");
+  const opts = (cur) => BYN_BOX_OPTS.map(([v, label]) =>
+    `<option value="${v}"${v === (cur || "") ? " selected" : ""}>${esc(label)}</option>`).join("");
+  tr.innerHTML = `
+    <td><input type="text" class="txt byn-t-name" style="width:100%" value="${esc(t || "")}" placeholder="例如：材质虚假"></td>
+    <td><textarea class="byn-t-reason" rows="2" style="width:100%;border:1px solid var(--line);border-radius:4px;padding:5px 7px;font-family:inherit;font-size:12px">${esc((rule && rule["理由"]) || "")}</textarea></td>
+    <td><select class="txt byn-t-b1" style="width:100%">${opts(rule && rule["第1框"])}</select></td>
+    <td><select class="txt byn-t-b2" style="width:100%">${opts(rule && rule["第2框"])}</select></td>
+    <td class="center"><span class="btn danger small">删</span></td>`;
+  tr.querySelector(".btn.danger").onclick = () => { tr.remove(); BY_dirty = true; };
+  tr.querySelectorAll("input,textarea,select").forEach(el =>
+    el.addEventListener("input", () => { BY_dirty = true; }));
+  return tr;
+}
+
+function renderBynTypes(rules) {
+  const tb = document.getElementById("byn-types-tbody");
+  if (!tb) return;
+  const ae = document.activeElement;
+  if (ae && ae.closest && ae.closest("#byn-types-tbody")) return;   // 正在编辑别重绘
+  tb.innerHTML = "";
+  const entries = Object.entries(rules || {});
+  if (!entries.length) {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `<td colspan="5" class="muted">还没有配置任何类型 —— 这样所有违规都不会自动申诉，只会提醒</td>`;
+    tb.appendChild(tr);
+    return;
+  }
+  for (const [t, r] of entries) tb.appendChild(bynTypeRow(t, r));
+}
+
+function bynAddType() {
+  const tb = document.getElementById("byn-types-tbody");
+  if (!tb) return;
+  if (tb.querySelector("td[colspan]")) tb.innerHTML = "";
+  tb.appendChild(bynTypeRow("", { "理由": "", "第1框": "box3", "第2框": "" }));
+  BY_dirty = true;
+}
+
+function bynCollectTypes() {
+  const out = {};
+  for (const tr of document.querySelectorAll("#byn-types-tbody tr")) {
+    const name = (tr.querySelector(".byn-t-name")?.value || "").trim();
+    if (!name) continue;
+    out[name] = {
+      "理由": (tr.querySelector(".byn-t-reason")?.value || "").trim(),
+      "第1框": tr.querySelector(".byn-t-b1")?.value || "",
+      "第2框": tr.querySelector(".byn-t-b2")?.value || "",
+    };
+  }
+  return out;
 }
 
 async function bynSaveSettings() {
@@ -1095,6 +1157,7 @@ async function bynSaveSettings() {
       "提交前人工确认": document.getElementById("byn-confirm").checked,
       "企微通知": document.getElementById("byn-push").checked,
       "统一申诉理由": document.getElementById("byn-reason").value.trim(),
+      "分类申诉": bynCollectTypes(),
     });
     BY_dirty = false;
     refreshBuyin(false);
@@ -1109,7 +1172,7 @@ function renderBysAccounts() {
   tb.innerHTML = "";
   const tip = document.getElementById("bys-tip");
   if (tip) {
-    tip.textContent = "材料列 = box1/box2 图片数；某个号没有材料时命中违规会被跳过（不会空申诉）。"
+    tip.textContent = "材料列 = box1/box2/box3 图片数；某个号某类型没材料时命中违规会被跳过（不会空申诉）。"
       + "「打开百应」会在浏览器画面里打开违规处置页，没登录就在那里扫码。";
   }
   for (const a of BY.accounts || []) {
@@ -1124,7 +1187,7 @@ function renderBysAccounts() {
       <td class="center"><input type="number" class="spin by-iv" min="0" value="${a.interval_own || 0}"
            title="0 = 跟随全局 ${a.interval} 秒"></td>
       <td><input type="text" class="by-rs" value="${esc(a.reason || "")}" placeholder="跟随统一理由"></td>
-      <td class="center">${a.mat1}/${a.mat2}</td>
+      <td class="center">${a.mat1}/${a.mat2}/${a.mat3 || 0}</td>
       <td class="${cls}" title="${esc(a.last_result || "")}">${esc(a.login_state)}</td>
       <td class="center">${a.today}</td>
       <td><span class="btn small" data-act="check">立即检查</span>

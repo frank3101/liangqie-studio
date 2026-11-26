@@ -420,7 +420,7 @@
     <!-- ======== 电商违规申诉 · 申诉材料 ======== -->
     <section class="page" id="page-buyin-mat">
       <div class="page-title">电商违规申诉 · 申诉材料</div>
-      <div class="page-desc">处理的是巨量百应后台「违规处置」里的带货违规单，和「作品申诉」是两套。每个号两套材料：<b>box1</b> = 申诉页第 1 个上传框（授权书 / 肖像保护截图等），<b>box2</b> = 第 2 个上传框（按要求提交的材料）。文件名按自然顺序排，一次选多张会全部带上。</div>
+      <div class="page-desc">处理的是巨量百应后台「违规处置」里的带货违规单，和「作品申诉」是两套。材料按类型分组：<b>box1</b> = 授权书/肖像保护截图，<b>box2</b> = 授权类补充材料，<b>box3</b> = 材质类材料（商品详情页截图、质检/进货凭证等，供「材质虚假」这类违规使用）。文件名按自然顺序排，一次选多张会全部带上。</div>
 
       <div class="row" id="bym-acc-row"></div>
 
@@ -446,6 +446,20 @@
                    onchange="bymUpload('box2', this)">
           </div>
           <div class="mat-grid" id="bym-box2"></div>
+        </div>
+      </div>
+      <div class="row mat-split">
+        <div class="card pad grow" style="min-width:0">
+          <div class="row" style="margin-top:0">
+            <b>box3 · 材质类材料</b>
+            <span class="muted" id="bym-c3"></span>
+            <span class="grow"></span>
+            <span class="btn primary small" onclick="document.getElementById('bym-f3').click()">上传图片</span>
+            <input type="file" id="bym-f3" multiple accept="image/*,.pdf" style="display:none"
+                   onchange="bymUpload('box3', this)">
+          </div>
+          <div class="mat-grid" id="bym-box3"></div>
+          <div class="muted" style="margin-top:6px">「材质虚假 / 虚假宣传（材质）」类违规用这套：商品详情页截图、质检报告、进货凭证等。</div>
         </div>
       </div>
       <div class="muted" style="margin-top:8px" id="bym-hint">材料目录：/data/materials/&lt;账号&gt;/box1、box2 —— 和原来的百应申诉模块完全一致，旧图片可以直接搬过来。</div>
@@ -477,6 +491,25 @@
           <textarea id="byn-reason" rows="3" style="flex:1; border:1px solid var(--line); border-radius:4px; padding:7px 8px; font-family:inherit; font-size:12.5px"></textarea>
         </div>
         <div class="muted" style="margin-top:4px">某个号想用不同理由，在下面表格的「申诉理由」列单独填；留空 = 用统一理由。</div>
+
+        <div class="row" style="margin-top:14px;border-top:1px solid var(--line);padding-top:12px">
+          <b>按违规类型申诉</b>
+          <span class="muted grow" style="font-size:12px">没列出的类型<b>不会自动申诉</b>，只在企微提醒你人工处理 —— 申诉机会只有一次，材料对不上会被驳回</span>
+          <span class="btn small" onclick="bynAddType()">+ 新增类型</span>
+        </div>
+        <div class="tbl-wrap" style="margin-top:6px">
+          <table class="grid" id="byn-types">
+            <thead><tr>
+              <th style="width:170px">违规类型（和列表里一致）</th>
+              <th>申诉理由（空 = 用统一理由）</th>
+              <th style="width:150px">第 1 个上传框</th>
+              <th style="width:150px">第 2 个上传框</th>
+              <th class="center" style="width:56px">删除</th>
+            </tr></thead>
+            <tbody id="byn-types-tbody"></tbody>
+          </table>
+        </div>
+        <div class="muted" style="margin-top:4px;font-size:12px">第 1/2 框 = 申诉页第 1/2 个上传框，右边选材料分组（box1 授权证明 / box2 申诉材料 / box3 材质类）；留空 = 不填这个框。改完记得点上面「保存设置」。</div>
       </div>
 
       <div class="card sect pad">
